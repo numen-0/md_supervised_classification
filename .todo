@@ -1,0 +1,22 @@
+┏┳┓┏━┓┳━┓┏━┓
+ ┃ ┃ ┃┃ ┃┃ ┃
+ ┻ ┗━┛┻━┛┗━┛
+./bob:
+[X] add preprocess
+[_] add vectorization
+[_] add quick testing
+./preprocess.py:
+[X] do the thing
+./vectorization.py:
+[_] get the models/methods
+[_] check the token lenght...
+[_] analize output
+./tunning.py:
+[_] do a small tunning for both models
+[_] save the best models
+./test.py:
+[_] load the models and test them
+[_] save results
+proyect:
+[_] delete unecessary stuff
+[_] README.md

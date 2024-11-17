@@ -1,0 +1,10 @@
+data/*
+__pycache__
+venv
+
+ekorketa.py
+evaluation.py
+predict.py
+proyecto.md
+save_best_model.py
+test.py

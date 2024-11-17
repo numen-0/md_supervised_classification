@@ -1,0 +1,50 @@
+#!/bin/sh
+
+set -eu
+
+test="${1:-true}"
+
+# vars ########################################################################
+CSV="./data/raw/DataI_MD.csv"
+if [ "$test" = "true" ]; then
+    PRE_OUT_DIR="./data/testdataset/"
+    PRE_ARGS="-s 70/20/10 -c 70"
+else
+    PRE_OUT_DIR="./data/dataset/"
+    PRE_ARGS="-s 70/20/10"
+fi
+
+## func #######################################################################
+C1="\e[32;1m"
+C2="\e[92m"
+C3="\e[95m"
+R="\e[0m"
+bob_say() {
+    printf "${C2}[bob]${R}: %s\n" "$1"
+}
+bob_cmd() {
+    printf "${C3}%s${R}\n" "$1"
+}
+
+## script #####################################################################
+printf "${C1}%s${R}\n" "bob is cooking (⌐■_■)"
+
+## env
+bob_say "activating env"
+bob_cmd ". ./sklearn-env/bin/activate"
+. ./venv/bin/activate
+
+## preprocess
+if [ -d "$PRE_OUT_DIR" ]; then
+    bob_say "skipping preprocess"
+else
+    bob_say "doing preprocess"
+    bob_cmd "python ./preprocess.py $PRE_ARGS $CSV -o $PRE_OUT_DIR"
+    time python ./preprocess.py $PRE_ARGS "$CSV" -o "$PRE_OUT_DIR"
+fi
+
+## vect
+# TODO
+
+printf "${C1}%s${R}\n" "bob cooked (⌐■_■)"
+
