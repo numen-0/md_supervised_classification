@@ -8,11 +8,14 @@
 ./preprocess.py:
 [X] do the thing
 ./vectorization.py:
-[_] get the models/methods
-[_] check the token lenght...
+[_] implement the models/methods
+    [_] bow
+    [X] https://spacy.io/usage/spacy-101
 [_] analize output
 ./tunning.py:
 [_] do a small tunning for both models
+    [_] base?
+    [_] https://scikit-learn.org/dev/modules/generated/sklearn.ensemble.StackingClassifier.html#sklearn.ensemble.StackingClassifier
 [_] save the best models
 ./test.py:
 [_] load the models and test them

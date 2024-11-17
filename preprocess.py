@@ -13,23 +13,21 @@ import analyzer
 ###############################################################################
 ## globals ####################################################################
 defaults = {
-    "safe":            False,
-    "chop":            0.0,
-    "split":           [0.9, 0.0, 0.1],
+    "chop": 0.0,
+    "split": [0.9, 0.0, 0.1],
     "split_and_parse": False,
     "silent_analysis": False,
-    "skip_analysis":   False,
+    "skip_analysis": False,
 }
 config = {
-    "paths":            [],
-    "output_dir":       None,
-    "safe":             False,
-    "chop":             0.0,
-    "split":            [0.9, 0.0, 0.1],
-    "split_and_parse":  False,
-    "silent_analysis":  False,
-    "skip_analysis":    False,
-    "analyzer_dir":     None,
+    "paths": [],
+    "output_dir": None,
+    "chop": 0.0,
+    "split": [0.9, 0.0, 0.1],
+    "split_and_parse": False,
+    "silent_analysis": False,
+    "skip_analysis": False,
+    "analyzer_dir": None,
 }
 
 
@@ -52,7 +50,8 @@ def data_filter_out(data):
     valid_pcm = data['PCM'].isin(['0', '1'])
     valid_rs = data['RS'].isin(['0', '1'])
     valid_pu = data['PU'].isin(['0', '1'])
-    valid_txt = data['TXT'].apply(lambda x: isinstance(x, str) and len(x.strip()) > 0)
+    valid_txt = data['TXT'].apply(
+        lambda x: isinstance(x, str) and len(x.strip()) > 0)
 
     valid_rows = valid_ui & valid_pcm & valid_rs & valid_pu & valid_txt
 
@@ -94,55 +93,7 @@ def _count_and_normalize(group):
     return pd.Series(normalized_counts, index=['F00', 'F01', 'F10', 'F11'])
 
 
-def data_combine_UI_safe(data):
-    """
-    Group the rows by both 'UI' and 'PU', apply necessary aggregation,
-    and normalize PCM/RS combinations (00, 01, 10, 11), while ensuring
-    that the combined TXT does not exceed the token limit.
-    PU or logic must be done before this.
-
-    :param data: DataFrame
-    :return: DataFrame grouped by 'UI' and 'PU' with normalized combinations.
-    """
-    # we import here because it's very heavy to load...
-    from tokenization import validate_tokens
-    combined_rows = []
-
-    # Iterating over each group of UI and PU
-    for (ui, pu), group in data.groupby(['UI', 'PU']):
-        current_txt = []
-        current_row = {'UI': ui, 'PU': pu, 'TXT': ''}
-        for _, row in group.iterrows():
-            joined_txt = ' '.join(current_txt + [row['TXT']])
-
-            # Check if the new TXT is valid according to tokenization rules
-            if validate_tokens(joined_txt): # update the current TXT
-                current_txt.append(row['TXT'])
-            else:                           # save current row and start a new
-                current_row['TXT'] = ' '.join(current_txt)
-                combined_rows.append(current_row)
-
-                current_txt = [row['TXT']]
-                current_row = {'UI': ui, 'PU': pu, 'TXT': ''}
-
-        if current_txt:
-            current_row['TXT'] = ' '.join(current_txt)
-            combined_rows.append(current_row)
-
-    # Create a new DataFrame from the combined rows
-    grouped_data = pd.DataFrame(combined_rows)
-
-    # Combine PCM and RS
-    data['PCM_RS'] = data['PCM'].astype(str) + data['RS'].astype(str)
-
-    normalized_data = data.groupby('UI', group_keys=False).apply(_count_and_normalize).reset_index()
-
-    final_data = pd.merge(grouped_data, normalized_data, on='UI', how='inner')
-
-    return final_data
-
-
-def data_combine_UI_unsafe(data):
+def data_combine_UI(data):
     """
     Group the rows by both 'UI' and 'PU', apply necessary aggregation,
     and normalize PCM/RS combinations (00, 01, 10, 11). PU or logic must
@@ -158,8 +109,8 @@ def data_combine_UI_unsafe(data):
     # combine PCM and RS
     data['PCM_RS'] = data['PCM'].astype(str) + data['RS'].astype(str)
 
-    normalized_data = data.groupby('UI', group_keys=False).apply(_count_and_normalize,
-                                                                 include_groups=False).reset_index()
+    normalized_data = data.groupby('UI', group_keys=False).apply(
+        _count_and_normalize, include_groups=False).reset_index()
 
     final_data = pd.merge(grouped_data, normalized_data, on='UI', how='inner')
 
@@ -225,21 +176,15 @@ def data_split_3(data, split, stratify=None):
     return train_df, dev_df, test_df
 
 
-def data_parse(data, analyze=False, safe=False):
+def data_parse(data, analyze=False):
     """
     parse the DataFrame
     :param data:  DataFrame;
     :param analyze: analyze the data or not
-    :param safe: check token lengths
     :return:      parsed_data
     """
     print(f"\tfiltering out invalid rows")
     data = data_filter_out(data)
-
-    if safe:
-        data_combine_UI = data_combine_UI_safe
-    else:
-        data_combine_UI = data_combine_UI_unsafe
 
     data['PU'] = data['PU'].astype(int)
     data['PCM'] = data['PCM'].astype(int)
@@ -297,14 +242,13 @@ def data_parse(data, analyze=False, safe=False):
 
 def data_reparse(conf_file):
     """
-    Reparse and reprocess the configuration, in safe mode.
+    Reparse and reprocess the configuration.
 
     :param conf_file: str; Path to the configuration file.
     """
     print(f"preprocess:reparse: reparsing")
     load_setup(conf_file)
     config["silent_analysis"] = True
-    config["safe"] = True
     filename = utils.path_join(config["output_dir"], "preprocess_conf.json")
     utils.json_save(config, filename)
 
@@ -338,8 +282,7 @@ def data_save(data, name):
 
 
 def setup(paths, output_dir, chop=0.0, split=(0.9, 0.0, 0.1),
-          split_and_parse=False, silent_analysis=False, skip_analysis=False,
-          safe=False):
+          split_and_parse=False, silent_analysis=False, skip_analysis=False):
     """
     Configure preprocessing setup.
 
@@ -350,13 +293,11 @@ def setup(paths, output_dir, chop=0.0, split=(0.9, 0.0, 0.1),
     :param split_and_parse: bool; If True, split data and parse (default: False).
     :param silent_analysis: bool; If True, suppress output during analysis (default: False).
     :param skip_analysis: bool; If True, skip the analysis phase (default: False).
-    :param safe: bool; If True, operate in safe mode (default: False).
     """
     config["paths"] = paths
     config["split_and_parse"] = split_and_parse
     config["output_dir"] = output_dir
     config["chop"] = chop
-    config["safe"] = safe
     config["skip_analysis"] = skip_analysis
     config["silent_analysis"] = silent_analysis
     config["analyzer_dir"] = utils.path_join(output_dir, "meta")
@@ -376,7 +317,6 @@ def setup(paths, output_dir, chop=0.0, split=(0.9, 0.0, 0.1),
     print(f"preprocess:setup: done")
     print(f"\tpath(s):         {config['paths']}")
     print(f"\toutput_dir:      {config['output_dir']}")
-    print(f"\tsafe:            {config['safe']}")
     print(f"\tchop:            {config['chop']}")
     print(f"\tsplit:           {config['split']}")
     print(f"\tsplit-and-parse: {config['split_and_parse']}")
@@ -402,10 +342,12 @@ def load_setup(path):
     setup(loaded_config["paths"], loaded_config["output_dir"],
           chop=loaded_config.get("chop", defaults["chop"]),
           split=loaded_config.get("split", defaults["split"]),
-          split_and_parse=loaded_config.get("split_and_parse", defaults['split_and_parse']),
-          silent_analysis=loaded_config.get("silent_analysis", defaults['silent_analysis']),
-          skip_analysis=loaded_config.get("skip_analysis", defaults['skip_analysis']),
-          safe=loaded_config.get("safe", defaults["safe"]))
+          split_and_parse=loaded_config.get(
+              "split_and_parse", defaults['split_and_parse']),
+          silent_analysis=loaded_config.get(
+              "silent_analysis", defaults['silent_analysis']),
+          skip_analysis=loaded_config.get(
+              "skip_analysis", defaults['skip_analysis']))
 
 
 def init():
@@ -435,8 +377,6 @@ def init():
                         help="Skip analysis")
     parser.add_argument('--silent-analysis', action='store_true',
                         help="Silence analyzer output")
-    parser.add_argument('--safe', action='store_true',
-                        help="Check if instances TXT fits our tokenization, and split instances if necessary")
 
     try:
         args = parser.parse_args()
@@ -466,7 +406,7 @@ def init():
 
     setup(args.csv_path, args.output_dir, split_and_parse=args.split_and_parse,
           chop=chop, split=split, silent_analysis=args.silent_analysis,
-          skip_analysis=args.skip_analysis, safe=args.safe)
+          skip_analysis=args.skip_analysis)
 
 
 """
@@ -484,6 +424,8 @@ wc -l data/processed/*.csv
 
     (it gives +3 lines because of the csv headers)
 """
+
+
 def execute():
     """
     Execute the preprocessing workflow.
@@ -508,7 +450,8 @@ def execute():
 
     # modify and split the data
     print(f"preprocess: parsing data")
-    train_df, dev_df , test_df= data_parse(data, analyze=True, safe=config["safe"])
+    train_df, dev_df, test_df = data_parse(
+        data, analyze=True)
 
     # save data
     print(f"preprocess: saving data to {config['output_dir']}")
@@ -531,3 +474,4 @@ def execute():
 if __name__ == "__main__":
     init()
     execute()
+

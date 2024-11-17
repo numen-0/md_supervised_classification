@@ -1,107 +1,67 @@
 import argparse
-import gc
 
 import numpy as np
+import spacy
 import pandas as pd
-import torch
 
-# pip install -U sentence-transformers
-from sentence_transformers import SentenceTransformer
-
-import tokenization
 import utils
-import preprocess
 
 
-def vectorize(path, output_dir, batch_size=128):
+def vectorize_bow(path, output_file):
+    # TODO:
+    pass
+
+
+def vectorize_spacy(path, output_file, batch_size=128):
     """
-    Vectorize the input text.
-    :param path: The text to vectorize
+    Vectorize the input text using SpaCy.
+    :param path: Path to the CSV file
+    :param output_file: File to save the output CSV
     :param batch_size: The size of the batches
     """
-    print(f"vectorization:vectorize: checking tokens", flush=True)
-    if tokenization.check_tokens(path):
-        directory = utils.path_dirname(path)
-        conf_file = utils.path_join(directory, 'preprocess_conf.json')
-        if utils.path_is_file(conf_file):
-            preprocess.data_reparse(conf_file)
-        else:
-            print(f"vectorization:vectorize: the configuration file doesn't exist")
-            print(f"\ttext might be truncated")
-
-    gc.collect()
-    print("vectorization:vectorize: vectorizing", flush=True)
+    print("vectorization: vectorizing using SpaCy", flush=True)
     sentences = utils.csv_load(path)
     texts = sentences['TXT'].values
-    model = SentenceTransformer('sentence-transformers/distiluse-base-multilingual-cased-v2')
+    nlp = spacy.load("es_core_news_md")
 
-    """
-    We can use the following line to get the embeddings. 
-    embeddings = model.encode(texts)
-    This handles the entire pipeline: tokenization, padding, truncation and generating the embeddings.
-
-    However, we can follow this steps manually and specify options.
-    First, we will tokenize the texts and get the input_ids and attention_masks.
-      - input_ids: tokenized version of the text. Token IDs.
-      - attention_mask: helps distinguish padding tokens.
-    Then, we can calculate the embeddings using these.
-    """
-
-    all_embeddings = []
-
-    torch.manual_seed(42)  # for reproducibility reasons
-    np.random.seed(42)
-    
-    print("vectorization:vectorize: batching", flush=True)
+    print("vectorization:vectorize_spacy: batching", flush=True)
+    docs = []
     for i in range(0, len(texts), batch_size):
-        print("\tdone: {0:.2f}%".format(i*100/len(texts)))
+        print(f"\tProcessed {i}/{len(texts)} ({i * 100 / len(texts):.2f}%)")
+
         batch_texts = texts[i:i + batch_size]
+        docs.extend(list(nlp.pipe(batch_texts)))
+    print("\tdone: 100.00%")
 
-        input_ids, attention_mask = tokenization.tokenize(batch_texts.tolist())
-
-        with torch.no_grad():  # Avoid gradient calculations
-            batch_embeddings = model({'input_ids': input_ids, 'attention_mask': attention_mask})
-
-        """
-        batch_embeddings is a dictionary with the following fields:
-        input_ids, attention_mask, token_embeddings, all_layer_embeddings, sentence_embedding
-         - token_embeddings: raw embeddings for each token. [batch_size, sequence_length, embedding_dim]
-         - all_layer_embeddings: for each transformer block. [batch_size, num_layers, sequence_length, embedding_dim]
-         - sentence_embedding: final sentence embeddings. [batch_size, embedding_dim]
-        sentence_embeddings is the result we want, which is of type torch.Tensor.
-        We'll convert it to a numpy array (numpy.ndarray) to be able to save it to a .csv.
-        """
-
-        batch_sentence_embedding = batch_embeddings['sentence_embedding'].cpu().numpy()
-        all_embeddings.append(batch_sentence_embedding)
-    print(f"\tdone: 100.00%")
-
-    print("vectorization:vectorize: merging batches", flush=True)
-    sentence_embedding = np.vstack(all_embeddings)
-
-    df = pd.DataFrame(sentence_embedding)
+    # create DataFrame
+    vectors = np.array([doc.vector for doc in docs])
+    df = pd.DataFrame(vectors)
     df['PU'] = sentences['PU']
+
+    # reorder columns if necessary
     df = df[['PU'] + [col for col in df.columns if col != 'PU']]
 
-    basename = utils.path_basename(path)
-    filename = utils.path_join(output_dir, basename)
-    utils.mkdir(output_dir)
-    utils.csv_save(df, filename)
+    # save the DataFrame
+    utils.mkdir(utils.path_dirname(output_file))
+    utils.csv_save(df, output_file)
 
-    print(f"vectorization:vectorize: Texts successfully vectorized and saved.")
+    print("vectorization: Texts successfully vectorized and saved.")
 
 
 ###############################################################################
-## main #######################################################################
+# main ########################################################################
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Vectorize CSV file(s)")
+    parser = argparse.ArgumentParser(description="Vectorize CSV file")
     # args
-    parser.add_argument('csv_path', type=str, nargs='+',
+    parser.add_argument('-i', '--csv-path', type=str, required=True,
                         help="Path(s) to the CSV file(s)")
-    parser.add_argument('-o', '--output-dir', type=str, required=True,
-                        help="Output directory to save the vectorize data")
-    parser.add_argument('-b', '--batch-size', type=int,
+    parser.add_argument('-o', '--output-file', type=str, required=True,
+                        help="Output file to save the vectorize data")
+    parser.add_argument('-b', '--batch-size', type=int, default=128,
                         help="Batch size (int>0); def: 128")
+    parser.add_argument('-m', '--mode', choices=['spacy', 'bow'],
+                        default='spacy',
+                        help="Vectorization using 'spacy' or 'bow'; def: spacy")
 
     try:
         args = parser.parse_args()
@@ -113,8 +73,9 @@ if __name__ == "__main__":
         if batch_size <= 0:
             print("vectorization: batch size must be a positive int")
             exit(1)
-    else:
-        batch_size = 128
 
-    for path in args.csv_path:
-        vectorize(path, args.output_dir, batch_size)
+    if args.mode == 'spacy':
+        vectorize_spacy(args.csv_path, args.output_file, batch_size)
+    elif args.mode == 'bow':
+        vectorize_bow(args.csv_path, args.output_file)
+

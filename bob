@@ -2,15 +2,18 @@
 
 set -eu
 
+# todo add a force redo flag
 test="${1:-true}"
 
 # vars ########################################################################
 CSV="./data/raw/DataI_MD.csv"
 if [ "$test" = "true" ]; then
-    PRE_OUT_DIR="./data/testdataset/"
+    PRE_OUT_DIR="./data/test_dataset"
+    VEC_OUT_DIR="./data/test_vectorized"
     PRE_ARGS="-s 70/20/10 -c 70"
 else
-    PRE_OUT_DIR="./data/dataset/"
+    PRE_OUT_DIR="./data/dataset"
+    VEC_OUT_DIR="./data/vectorized"
     PRE_ARGS="-s 70/20/10"
 fi
 
@@ -44,7 +47,22 @@ else
 fi
 
 ## vect
-# TODO
+if [ -d "$VEC_OUT_DIR" ]; then
+    bob_say "skipping vectorization"
+else
+    bob_say "doing vectorization"
+    for f in train.csv dev.csv test.csv; do
+        bob_cmd "python vectorization.py \\
+    -i $PRE_OUT_DIR/$f \\
+    -o $VEC_OUT_DIR/spacy/$f"
+        time python vectorization.py \
+            -i $PRE_OUT_DIR/$f \
+            -o $VEC_OUT_DIR/spacy/$f
+        # TODO: bow
+    done
+fi
+
+## ...
 
 printf "${C1}%s${R}\n" "bob cooked (⌐■_■)"
 
