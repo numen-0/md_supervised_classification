@@ -4,8 +4,13 @@ set -eu
 
 
 # Default values
-test=false
+# TODO: document this in the README.md
+# test=false
+# silent=false
 force=false
+
+test=true
+silent=true
 
 print_help() {
     cat <<EOF
@@ -16,6 +21,8 @@ OPTIONS:
         run programs with smaller size data
     -f, --force
         force re-run of all programs
+    -s, --silent
+        silent the programs that can be silent
     -h, --help
         print this help message and exit
 EOF
@@ -40,16 +47,31 @@ while [ $# -gt 0 ]; do
 done
 
 # vars ########################################################################
-CSV="./data/raw/DataI_MD.csv"
+RAW_CSV="./data/raw/DataI_MD.csv"
+DATA_DIR="./data"
+
 if [ "$test" = "true" ]; then
-    PRE_OUT_DIR="./data/test_dataset"
-    PRE_ARGS="-s 70/20/10 -c 70"
-    VEC_OUT_DIR="./data/test_vectorized"
+    PRE_OUT_DIR="$DATA_DIR/test_dataset"
+    VEC_OUT_DIR="$DATA_DIR/test_vectorized"
+    TUN_OUT_DIR="$DATA_DIR/test_tuning"
+
+    PRE_ARGS="-s 70/20/10 -c 70"    # chop the data to a %30 for fast testing
+    TUN_ARGS="-m small"
 else
-    PRE_OUT_DIR="./data/dataset"
+    PRE_OUT_DIR="$DATA_DIR/dataset"
+    VEC_OUT_DIR="$DATA_DIR/vectorized"
+    TUN_OUT_DIR="$DATA_DIR/tuning"
+
     PRE_ARGS="-s 70/20/10"
-    VEC_OUT_DIR="./data/vectorized"
+    TUN_ARGS="-m big"
 fi
+
+[ "$silent" = "true" ] \
+    && PRE_ARGS="$PRE_ARGS --silent-analysis" \
+    && TUN_ARGS="$TUN_ARGS --silent"
+
+# TUN_IN_DIR="$VEC_OUT_DIR/bow"
+TUN_IN_DIR="$VEC_OUT_DIR/spacy" 
 
 ## func #######################################################################
 C1="\e[32;1m"
@@ -76,8 +98,8 @@ if [ -d "$PRE_OUT_DIR" ] && [ "$force" != true ]; then
     bob_say "skipping preprocess"
 else
     bob_say "doing preprocess"
-    bob_cmd "python ./preprocess.py $PRE_ARGS $CSV -o $PRE_OUT_DIR"
-    time python ./preprocess.py $PRE_ARGS "$CSV" -o "$PRE_OUT_DIR"
+    bob_cmd "python ./preprocess.py $PRE_ARGS $RAW_CSV -o $PRE_OUT_DIR"
+    time python ./preprocess.py $PRE_ARGS "$RAW_CSV" -o "$PRE_OUT_DIR"
 fi
 
 ## vect
@@ -110,7 +132,43 @@ else
     done
 fi
 
-## ...
+## minitest (vectorization)
+# TODO:
+
+## tuning
+if [ -d "$TUN_OUT_DIR" ] && [ "$force" != true ] && false; then
+    bob_say "skipping tuning"
+else
+    bob_say "tuning some params"
+    # rforest (base)
+    bob_cmd "python tuning.py \\
+    -t $TUN_IN_DIR/train.csv \\
+    -d $TUN_IN_DIR/dev.csv \\
+    -o $TUN_OUT_DIR/rtree_params.json \\
+    $TUN_ARGS -c rforest"
+    time python tuning.py \
+        -t $TUN_IN_DIR/train.csv \
+        -d $TUN_IN_DIR/dev.csv \
+        -o $TUN_OUT_DIR/rtree_params.json \
+        $TUN_ARGS -c rforest
+    # stacking
+    bob_cmd "python tuning.py \\
+    -t $TUN_IN_DIR/train.csv \\
+    -d $TUN_IN_DIR/dev.csv \\
+    -o $TUN_OUT_DIR/stacking_params.json \\
+    $TUN_ARGS -c stacking"
+    time python tuning.py \
+        -t $TUN_IN_DIR/train.csv \
+        -d $TUN_IN_DIR/dev.csv \
+        -o $TUN_OUT_DIR/stacking_params.json \
+        $TUN_ARGS -c stacking
+fi
+
+## gen model and save it (train+dev)
+# TODO:
+
+## test models (vs test)
+# TODO:
 
 printf "${C1}%s${R}\n" "bob cooked (⌐■_■)"
 

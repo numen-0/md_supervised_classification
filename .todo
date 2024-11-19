@@ -3,19 +3,21 @@
  ┻ ┗━┛┻━┛┗━┛
 ./bob:
 [X] add preprocess
-[_] add vectorization
+[X] add vectorization
 [_] add quick testing
 ./preprocess.py:
 [X] do the thing
 ./vectorization.py:
-[_] implement the models/methods
-    [_] bow
+[_] implement:
+    [_] bow (using sklearn)
+    [X] bow (custom using Spacy)
     [X] https://spacy.io/usage/spacy-101
 [_] analize output
-./tunning.py:
-[_] do a small tunning for both models
-    [_] base?
-    [_] https://scikit-learn.org/dev/modules/generated/sklearn.ensemble.StackingClassifier.html#sklearn.ensemble.StackingClassifier
+./tuning.py:
+[X] do a small tuning for both models
+    [X] RandomForest
+    [X] https://scikit-learn.org/dev/modules/generated/sklearn.ensemble.StackingClassifier.html#sklearn.ensemble.StackingClassifier
+./train_model.py:
 [_] save the best models
 ./test.py:
 [_] load the models and test them

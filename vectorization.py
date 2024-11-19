@@ -7,7 +7,7 @@ import pandas as pd
 import utils
 
 
-# BoW #########################################################################
+# SpaCy #######################################################################
 def gen_bow(path, vocab_file):
     """
     Generate Bag of Words (BoW) vocabulary and save it.
@@ -124,7 +124,7 @@ def validate_args(args):
         exit(1)
 
     if args.mode == 'bow' and not args.bow_file:
-        print("vectorization: BoW file is required for 'bow' mode.")
+        print("vectorization: BoW file is required for 'bow' mode")
         exit(1)
 
 
@@ -159,6 +159,6 @@ if __name__ == "__main__":
     elif args.mode == 'spacy':
         vectorize_spacy(args.csv_path, args.output_file, args.batch_size)
     else:
-        print("Error: Unknown mode.")
+        print("vectorization: Unknown mode")
         exit(1)
 
