@@ -7,7 +7,14 @@ set -eu
 # TODO: document this in the README.md
 # test=false
 # silent=false
-force=false
+force_all=false
+
+force_pre=false # TODO: implement this stuff
+force_vec=false
+# force_q1=false
+force_tun=false
+force_inf=false
+# force_q2=false
 
 test=true
 silent=true
@@ -19,8 +26,16 @@ Usage: bob [OPTIONS]
 OPTIONS:
     -t, --test
         run programs with smaller size data
-    -f, --force
+    -f, --force-all
         force re-run of all programs
+    -P, --force-preprocess
+        force preprocess
+    -V, --force-vectorization
+        force vectorization
+    -T, --force-tuning
+        force tuning
+    -I, --force-inference
+        force inference
     -s, --silent
         silent the programs that can be silent
     -h, --help
@@ -31,8 +46,12 @@ EOF
 # Parse arguments
 while [ $# -gt 0 ]; do
   case "$1" in
-    -t|--test) test=true ;;
-    -f|--force) force=true ;;
+    -t|--test)                  test=true ;;
+    -f|--force-all)             force_all=true ;;
+    -P|--force-preprocess)      force_pre=true ;;
+    -V|--force-vectorization)   force_vec=true ;;
+    -T|--force-tuning)          force_tun=true ;;
+    -I|--force-inference)       force_inf=true ;;
     -h|--help)
         print_help
         exit 0
@@ -54,6 +73,7 @@ if [ "$test" = "true" ]; then
     PRE_OUT_DIR="$DATA_DIR/test_dataset"
     VEC_OUT_DIR="$DATA_DIR/test_vectorized"
     TUN_OUT_DIR="$DATA_DIR/test_tuning"
+    INF_OUT_DIR="$DATA_DIR/test_models"
 
     PRE_ARGS="-s 70/20/10 -c 70"    # chop the data to a %30 for fast testing
     TUN_ARGS="-m small"
@@ -61,6 +81,7 @@ else
     PRE_OUT_DIR="$DATA_DIR/dataset"
     VEC_OUT_DIR="$DATA_DIR/vectorized"
     TUN_OUT_DIR="$DATA_DIR/tuning"
+    INF_OUT_DIR="$DATA_DIR/models"
 
     PRE_ARGS="-s 70/20/10"
     TUN_ARGS="-m big"
@@ -71,7 +92,9 @@ fi
     && TUN_ARGS="$TUN_ARGS --silent"
 
 # TUN_IN_DIR="$VEC_OUT_DIR/bow"
-TUN_IN_DIR="$VEC_OUT_DIR/spacy" 
+TUN_IN_DIR="$VEC_OUT_DIR/spacy"
+TUN_OUT_RFOREST_PARAMS="$TUN_OUT_DIR/rforest_params.json"
+TUN_OUT_STACKING_PARAMS="$TUN_OUT_DIR/stacking_params.json"
 
 ## func #######################################################################
 C1="\e[32;1m"
@@ -94,18 +117,16 @@ bob_cmd ". ./sklearn-env/bin/activate"
 . ./venv/bin/activate
 
 ## preprocess
-if [ -d "$PRE_OUT_DIR" ] && [ "$force" != true ]; then
-    bob_say "skipping preprocess"
-else
+if $force_all || $force_pre || [ ! -d "$PRE_OUT_DIR" ]; then
     bob_say "doing preprocess"
     bob_cmd "python ./preprocess.py $PRE_ARGS $RAW_CSV -o $PRE_OUT_DIR"
     time python ./preprocess.py $PRE_ARGS "$RAW_CSV" -o "$PRE_OUT_DIR"
+else
+    bob_say "skipping preprocess"
 fi
 
 ## vect
-if [ -d "$VEC_OUT_DIR" ] && [ "$force" != true ]; then
-    bob_say "skipping vectorization"
-else
+if $force_all || $force_vec || [ ! -d "$VEC_OUT_DIR" ]; then
     BOW_FILE=$VEC_OUT_DIR/bow/BoW.csv
     bob_say "generating BoW"
     bob_cmd "python vectorization.py -i $PRE_OUT_DIR/train.csv -o $BOW_FILE -g"
@@ -130,42 +151,66 @@ else
             -o $VEC_OUT_DIR/bow/$f \
             -m 'bow' -v $BOW_FILE
     done
+else
+    bob_say "skipping vectorization"
 fi
 
 ## minitest (vectorization)
 # TODO:
 
 ## tuning
-if [ -d "$TUN_OUT_DIR" ] && [ "$force" != true ] && false; then
-    bob_say "skipping tuning"
-else
+if $force_all || $force_tun || [ ! -d "$TUN_OUT_DIR" ]; then
     bob_say "tuning some params"
     # rforest (base)
     bob_cmd "python tuning.py \\
     -t $TUN_IN_DIR/train.csv \\
     -d $TUN_IN_DIR/dev.csv \\
-    -o $TUN_OUT_DIR/rtree_params.json \\
+    -o $TUN_OUT_RFOREST_PARAMS \\
     $TUN_ARGS -c rforest"
     time python tuning.py \
         -t $TUN_IN_DIR/train.csv \
         -d $TUN_IN_DIR/dev.csv \
-        -o $TUN_OUT_DIR/rtree_params.json \
+        -o $TUN_OUT_RFOREST_PARAMS \
         $TUN_ARGS -c rforest
     # stacking
     bob_cmd "python tuning.py \\
     -t $TUN_IN_DIR/train.csv \\
     -d $TUN_IN_DIR/dev.csv \\
-    -o $TUN_OUT_DIR/stacking_params.json \\
+    -o $TUN_OUT_STACKING_PARAMS \\
     $TUN_ARGS -c stacking"
     time python tuning.py \
         -t $TUN_IN_DIR/train.csv \
         -d $TUN_IN_DIR/dev.csv \
-        -o $TUN_OUT_DIR/stacking_params.json \
+        -o $TUN_OUT_STACKING_PARAMS \
         $TUN_ARGS -c stacking
+else
+    bob_say "skipping tuning"
 fi
 
 ## gen model and save it (train+dev)
-# TODO:
+if $force_all || $force_inf || [ ! -d "$INF_OUT_DIR" ]; then
+    bob_say "doing inference"
+    # rforest (base)
+    bob_cmd "python inference.py -c rforest \\
+    -i $TUN_OUT_RFOREST_PARAMS \\
+    -t $TUN_IN_DIR/train.csv \\
+    -o $INF_OUT_DIR/rfores.pkl"
+    time python inference.py -c rforest \
+        -i $TUN_OUT_RFOREST_PARAMS \
+        -t $TUN_IN_DIR/train.csv \
+        -o $INF_OUT_DIR/rfores.pkl
+    # stacking
+    bob_cmd "python inference.py -c stacking \\
+    -i $TUN_OUT_RFOREST_PARAMS \\
+    -t $TUN_IN_DIR/train.csv \\
+    -o $INF_OUT_DIR/stacking.pkl"
+    time python inference.py -c stacking \
+        -i $TUN_OUT_STACKING_PARAMS \
+        -t $TUN_IN_DIR/train.csv \
+        -o $INF_OUT_DIR/stacking.pkl
+else
+    bob_say "skipping inference"
+fi
 
 ## test models (vs test)
 # TODO:

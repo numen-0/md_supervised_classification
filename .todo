@@ -4,22 +4,29 @@
 ./bob:
 [X] add preprocess
 [X] add vectorization
-[_] add quick testing
+[_] add quick testing Q1
+[X] add tuning
+[X] add train_model
+[_] add quick testing Q2
 ./preprocess.py:
 [X] do the thing
 ./vectorization.py:
-[_] implement:
-    [_] bow (using sklearn)
+[X] implement:
+    [X] bow (using sklearn)
     [X] bow (custom using Spacy)
     [X] https://spacy.io/usage/spacy-101
-[_] analize output
+./test_q1.py:
+[_] do the thing
+[_] load the data and test them
+[_] save results
 ./tuning.py:
 [X] do a small tuning for both models
     [X] RandomForest
     [X] https://scikit-learn.org/dev/modules/generated/sklearn.ensemble.StackingClassifier.html#sklearn.ensemble.StackingClassifier
-./train_model.py:
-[_] save the best models
-./test.py:
+./inference.py:
+[X] do the thing
+./test_q1.py:
+[_] do the thing
 [_] load the models and test them
 [_] save results
 proyect:

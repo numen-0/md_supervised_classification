@@ -136,13 +136,13 @@ def csv_save(data, path):
 
 def load_data(path):
     """
-    Transform data in X train and True labels data-sets
-    :param data:  Dataframe
-    :return:  X train and true labels data-sets
+    Transform data into X (feature data) and y (labels) data-sets
+    :param path: Path to the CSV file
+    :return: Tuple (X, y) where X is feature data (float) and y are labels (int)
     """
     data = csv_load(path)
-    y = data.iloc[:, 0].to_numpy()  # labels
-    X = data.iloc[:, 1:].to_numpy()  # data
+    y = data.iloc[:, 0].to_numpy(dtype=int)     # labels
+    X = data.iloc[:, 1:].to_numpy(dtype=float)  # data
     return X, y
 
 

@@ -7,6 +7,7 @@ from sklearn.ensemble import StackingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 import numpy as np
 
@@ -133,6 +134,11 @@ def tuning_StackingClassifier(X_train, y_train, X_dev, y_dev,
     # Merge train and dev set to perform tuning
     X_full = np.vstack((X_train, X_dev))
     y_full = np.hstack((y_train, y_dev))
+
+    # Standardize features
+    # NOTE: good for CSV, LogisticRegression and Stacking; ensure consistency
+    scaler = StandardScaler()
+    X_full = scaler.fit_transform(X_full)
 
     verbose = 3 if not silent else 1
 

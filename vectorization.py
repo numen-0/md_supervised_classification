@@ -1,16 +1,17 @@
 import argparse
 
 import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
 import spacy
 import pandas as pd
 
 import utils
 
 
-# SpaCy #######################################################################
-def gen_bow(path, vocab_file):
+# BoW #########################################################################
+def gen_bow_spacy(path, vocab_file):
     """
-    Generate Bag of Words (BoW) vocabulary and save it.
+    Generate Bag of Words (BoW) vocabulary and save it using SpaCy
     :param path: Path to the CSV file
     :param vocab_file: File to save the vocabulary as a separate mapping
     """
@@ -41,7 +42,7 @@ def gen_bow(path, vocab_file):
     print("vectorization:gen_bow: BoW done")
 
 
-def vectorize_bow(path, vocab_file, output_file):
+def vectorize_bow_spacy(path, vocab_file, output_file):
     """
     Vectorize the input text using Bag of Words with index-based column names.
     :param path: Path to the CSV file
@@ -72,6 +73,72 @@ def vectorize_bow(path, vocab_file, output_file):
     bow_df = bow_df[['PU'] + [col for col in bow_df.columns if col != 'PU']]
 
     # save the DataFrame
+    utils.mkdir(utils.path_dirname(output_file))
+    utils.csv_save(bow_df, output_file)
+    print("vectorization:vectorize_bow: Vectorization done")
+
+
+def gen_bow_sklearn(path, vocab_file):
+    """
+    Generate Bag of Words (BoW) vocabulary and save it using sklearn.
+    :param path: Path to the CSV file
+    :param vocab_file: File to save the vocabulary as a separate mapping
+    """
+    print("vectorization: Generating Bag of Words (BoW) vocabulary")
+    # Load
+    sentences = utils.csv_load(path)
+    texts = sentences['TXT'].values
+
+    # Create BoW vocabulary
+    # vectorizer = CountVectorizer(lowercase=True, stop_words='english')
+    vectorizer = CountVectorizer(lowercase=True, stop_words='spanish')
+    vectorizer.fit(texts)
+
+    vocab = vectorizer.get_feature_names_out()
+    word_to_idx = {word: idx for idx, word in enumerate(vocab)}
+
+    print(f"vectorization:gen_bow: vocabulary size {len(vocab)} words")
+
+    # Save vocabulary as DataFrame
+    vocab_df = pd.DataFrame({
+        'index': list(word_to_idx.values()),
+        'word': list(word_to_idx.keys())
+    })
+    utils.mkdir(utils.path_dirname(vocab_file))
+    utils.csv_save(vocab_df, vocab_file)
+    print("vectorization:gen_bow: BoW done")
+
+
+def vectorize_bow_sklearn(path, vocab_file, output_file):
+    """
+    Vectorize the input text using Bag of Words with sklearn's CountVectorizer.
+    :param path: Path to the CSV file
+    :param vocab_file: File containing the vocabulary index mapping
+    :param output_file: File to save the vectorized data
+    """
+    print("vectorization: Vectorizing using Bag of Words (BoW)")
+
+    # Load vocabulary
+    vocab_df = utils.csv_load(vocab_file)
+    vocab = vocab_df['word'].tolist()
+
+    # Load texts
+    sentences = utils.csv_load(path)
+    texts = sentences['TXT'].values
+
+    # Vectorize texts using pre-loaded vocabulary
+    vectorizer = CountVectorizer(vocabulary=vocab)
+    bow_vectors = vectorizer.transform(texts).toarray()
+
+    # Create DataFrame for BoW vectors
+    bow_df = pd.DataFrame(bow_vectors,
+                          columns=vectorizer.get_feature_names_out())
+    bow_df['PU'] = sentences['PU']
+
+    # Reorder columns to ensure 'PU' is the first column
+    bow_df = bow_df[['PU'] + [col for col in bow_df.columns if col != 'PU']]
+
+    # Save the DataFrame
     utils.mkdir(utils.path_dirname(output_file))
     utils.csv_save(bow_df, output_file)
     print("vectorization:vectorize_bow: Vectorization done")
@@ -153,9 +220,9 @@ if __name__ == "__main__":
         exit(1)
 
     if args.gen_bow:
-        gen_bow(args.csv_path, args.output_file)
+        gen_bow_spacy(args.csv_path, args.output_file)
     elif args.mode == 'bow':
-        vectorize_bow(args.csv_path, args.bow_file, args.output_file)
+        vectorize_bow_sklearn(args.csv_path, args.bow_file, args.output_file)
     elif args.mode == 'spacy':
         vectorize_spacy(args.csv_path, args.output_file, args.batch_size)
     else:
