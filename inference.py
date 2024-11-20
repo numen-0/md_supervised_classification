@@ -6,6 +6,7 @@ from sklearn.ensemble import StackingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+import numpy as np
 
 import utils
 
@@ -110,12 +111,12 @@ def train_StackingClassifier(X_train, y_train, params):
 # main ########################################################################
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a model and save it")
+    parser.add_argument('train_csv', type=str, nargs='*',
+                        help="Path(s) to the train CSV file(s)")
     parser.add_argument('-i', '--params-path', type=str, required=True,
                         help="Path to the JSON file with params")
     parser.add_argument('-o', '--output-file', type=str, required=True,
                         help="Output file to save the model.pkl")
-    parser.add_argument('-t', '--train-csv', type=str, nargs='+',
-                        help="Path(s) to the train CSV file(s)")
     parser.add_argument('-c', '--classifier', choices=['rforest', 'stacking'],
                         required=True,
                         help="Train either 'rforest' or 'stacking' classifier")

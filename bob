@@ -47,17 +47,15 @@ EOF
 while [ $# -gt 0 ]; do
   case "$1" in
     -t|--test)                  test=true ;;
+    -s|--silent)                silent=true ;;
     -f|--force-all)             force_all=true ;;
     -P|--force-preprocess)      force_pre=true ;;
     -V|--force-vectorization)   force_vec=true ;;
     -T|--force-tuning)          force_tun=true ;;
     -I|--force-inference)       force_inf=true ;;
-    -h|--help)
-        print_help
-        exit 0
-        ;;
+    -h|--help)                  print_help; exit 0 ;;
     *)
-        echo "Unknown argument: $1" >&2
+        echo "Unknown flag: $1" >&2
         print_help >&2
         exit 1
         ;;
@@ -192,21 +190,25 @@ if $force_all || $force_inf || [ ! -d "$INF_OUT_DIR" ]; then
     bob_say "doing inference"
     # rforest (base)
     bob_cmd "python inference.py -c rforest \\
+    $TUN_IN_DIR/train.csv \\
+    $TUN_IN_DIR/dev.csv \\
     -i $TUN_OUT_RFOREST_PARAMS \\
-    -t $TUN_IN_DIR/train.csv \\
     -o $INF_OUT_DIR/rfores.pkl"
     time python inference.py -c rforest \
+        $TUN_IN_DIR/train.csv \
+        $TUN_IN_DIR/dev.csv \
         -i $TUN_OUT_RFOREST_PARAMS \
-        -t $TUN_IN_DIR/train.csv \
         -o $INF_OUT_DIR/rfores.pkl
     # stacking
     bob_cmd "python inference.py -c stacking \\
+    $TUN_IN_DIR/train.csv \\
+    $TUN_IN_DIR/dev.csv \\
     -i $TUN_OUT_RFOREST_PARAMS \\
-    -t $TUN_IN_DIR/train.csv \\
     -o $INF_OUT_DIR/stacking.pkl"
     time python inference.py -c stacking \
+        $TUN_IN_DIR/train.csv \
+        $TUN_IN_DIR/dev.csv \
         -i $TUN_OUT_STACKING_PARAMS \
-        -t $TUN_IN_DIR/train.csv \
         -o $INF_OUT_DIR/stacking.pkl
 else
     bob_say "skipping inference"

@@ -2,7 +2,4 @@ data/*
 __pycache__
 venv
 
-evaluation.py
-predict.py
-save_best_model.py
 test.py

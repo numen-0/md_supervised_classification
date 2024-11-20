@@ -32,15 +32,83 @@ pip install -r requirements.txt
 #### 1. By using `bob`
 Run the main dash script:
 ```bash
-# TODO: provide detailed flags and usage.
 ./bob 
 ```
 
 The script will:
-- preprocess the data (if not already done)
-- vectorize the data (if not already done) (WIP)
-- train and evaluate models (WIP)
+1. preprocess the data
+2. vectorize the data
+3. train and evaluate models (tuning)
+4. generate the models from the params acquired in the tuning
+5. run the tests for the Q1 and Q2 (WIP)
+
+If one step was done, the next time you run the program it will be skiped, but
+you can force to run all or individual steps.
+
+For more info about the script
+```bash
+./bob -h
+```
 
 #### 2. Manually
-`TODO`: Provide detailed instructions for manually running each step.
+1. preprocess the data
+```bash
+python ./preprocess.py \
+    ./data/raw/DataI_MD.csv \
+    -o ./data/dataset/ \
+    -s 70/20/10
+```
+2. vectorize the data
+```bash
+# using SpaCy
+python vectorization.py \
+    -i ./data/dataset/train.csv \
+    -o ./data/vectorized/spacy/train.csv
+# using BoW
+## get BoW
+python vectorization.py \
+    -i ./data/test_dataset/train.csv \
+    -o ./data/test_vectorized/bow/BoW.csv \
+    -g
+python vectorization.py \
+    -i ./data/dataset/train.csv \
+    -o ./data/vectorized/bow/train.csv \
+    -m 'bow' -v ./data/vectorized/bow/BoW.csv
+```
+3. train and evaluate models (tuning)
+```bash
+# RandomForestClassifier
+python tuning.py \
+    -t ./data/vectorized/spacy/train.csv \
+    -d ./data/vectorized/spacy/dev.csv \
+    -o ./data/tuning/rforest_params.json \
+    -m small -c rforest
+# StackingClassifier
+python tuning.py \
+    -t ./data/test_vectorized/spacy/train.csv \
+    -d ./data/test_vectorized/spacy/dev.csv \
+    -o ./data/test_tuning/stacking_params.json \
+    -m small -c stacking
+```
+4. generate the models from the params acquired in the tuning
+```bash
+# RandomForestClassifier
+python inference.py -c rforest \
+    ./data/vectorized/spacy/train.csv \
+    ./data/vectorized/spacy/dev.csv \
+    -i ./data/tuning/rforest_params.json \
+    -o ./data/models/rfores.pkl
+# StackingClassifier
+python inference.py -c stacking \
+    ./data/vectorized/spacy/train.csv \
+    ./data/vectorized/spacy/dev.csv \
+    -i ./data/tuning/rforest_params.json \
+    -o ./data/models/stacking.pkl
+```
+5. run the tests for the Q1 and Q2 (WIP)
+
+For more info about the scripts:
+```bash
+python script.py -h
+```
 
