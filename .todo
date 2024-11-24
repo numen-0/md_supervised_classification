@@ -12,13 +12,13 @@
 [X] do the thing
 ./vectorization.py:
 [X] do the thing
-./test_q1.py:
+./rq1.py
 [X] do the thing
 ./tuning.py:
 [X] do the thing
-./inference.py:
+./train.py:
 [X] do the thing
-./test_q2.py:
+./rq2.py:
 [_] do the thing
 [_] load the models and test them
 [_] save results

@@ -14,12 +14,14 @@ import utils
 def train_RandomForestClassifier(X_train, y_train, params):
     """
     Train a RandomForestClassifier with the given parameters.
-    :param X_train: Feature data for training
-    :param params: Dictionary containing the params for RandomForestClassifier
-    :return: Trained RandomForestClassifier model
+    :param X_train: feature data for training
+    :param params: dictionary containing the params for RandomForestClassifier
+    :return: trained RandomForestClassifier model
+    :return: used pca | None
     """
     # Extract PCA components if specified
     n_components = params.get("PCA", None)
+    pca = None
     if n_components is not None:
         print(f"\tapplying PCA with {n_components} components")
         pca = PCA(n_components=n_components)
@@ -32,9 +34,9 @@ def train_RandomForestClassifier(X_train, y_train, params):
 
     # Train the RandomForestClassifier
     print("\ttraining cls with parameters: \n", rf_params)
-    clf = RandomForestClassifier(**rf_params)
-    clf.fit(X_train, y_train)
-    return clf
+    cls = RandomForestClassifier(**rf_params)
+    cls.fit(X_train, y_train)
+    return cls, pca
 
 
 def train_StackingClassifier(X_train, y_train, params):
@@ -43,6 +45,7 @@ def train_StackingClassifier(X_train, y_train, params):
     :param X_train: Feature data for training
     :param params: Dictionary containing the parameters for StackingClassifier
     :return: Trained StackingClassifier model
+    :return: used pca | None
     """
     # Extract PCA components if specified
     n_components = params.get("PCA", None)
@@ -75,6 +78,7 @@ def train_StackingClassifier(X_train, y_train, params):
     meta_params.setdefault('random_state', random_state)
     meta_params.setdefault('class_weight', class_weight)
 
+    pca = None
     if n_components is not None:
         print(f"\tapplying PCA with {n_components} components")
         pca = PCA(n_components=n_components)
@@ -100,11 +104,27 @@ def train_StackingClassifier(X_train, y_train, params):
     print("\t - gb:", gb_params)
     print("\t - svm:", svm_params)
     print("\t - lg:", meta_params)
-    clf = StackingClassifier(estimators=base_estimators,
+    cls = StackingClassifier(estimators=base_estimators,
                              final_estimator=meta_estimator,
                              passthrough=True)
-    clf.fit(X_train, y_train)
-    return clf
+    cls.fit(X_train, y_train)
+    return cls, pca
+
+
+def merge_data(paths):
+    X_full, y_full = None, None
+    for path in paths:
+        try:
+            x, y = utils.load_data(path)
+            if X_full is None:
+                X_full, y_full = x, y
+            else:
+                X_full = np.vstack((X_full, x))
+                y_full = np.hstack((y_full, y))
+        except Exception as e:
+            print(f"Error loading data from {path}: {e}")
+            exit(1)
+    return X_full, y_full
 
 
 ###############################################################################
@@ -126,36 +146,24 @@ if __name__ == "__main__":
     except SystemExit:
         exit(1)
 
-    print("inference: loading params")
+    print("train: loading params")
     params = utils.json_load(args.params_path)
 
-    print("inference: loading data")
-    X_train, y_train = None, None
-    for path in args.train_csv:
-        try:
-            x, y = utils.load_data(path)
-            if X_train is None:
-                X_train, y_train = x, y
-            else:
-                X_train = np.vstack((X_train, x))
-                y_train = np.hstack((y_train, y))
-        except Exception as e:
-            print(f"Error loading data from {path}: {e}")
-            exit(1)
+    print("train: loading data")
+    X_train, y_train = merge_data(args.train_csv)
 
     if args.classifier == "rforest":
-        print("inference: training 'RandomForestClassifier'")
-        cls = train_RandomForestClassifier(X_train, y_train, params)
+        print("train: training 'RandomForestClassifier'")
+        cls, _ = train_RandomForestClassifier(X_train, y_train, params)
     elif args.classifier == "stacking":
-        print("inference: training 'StackingClassifier'")
-        cls = train_StackingClassifier(X_train, y_train, params)
+        print("train: training 'StackingClassifier'")
+        cls, _ = train_StackingClassifier(X_train, y_train, params)
     else:
-        print("inference: Unknown classifier")
+        print("train: Unknown classifier")
         exit(1)
 
-    print("inference: saving model")
+    print("train: saving model")
     utils.mkdir(utils.path_dirname(args.output_file))
     utils.save_model(cls, args.output_file)
 
-    print("inference: done")
-
+    print("train: done")

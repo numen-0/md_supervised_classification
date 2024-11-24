@@ -10,27 +10,27 @@ import seaborn as sns
 import utils
 
 
-def test(train, dev, out_dir, silent=False):
+def test(train_path, dev_path, out_dir, silent=False):
     '''
     1. load data.
     2. get metadata size, number of instances, and dimensions.
     3. train a classifier (Random Forest).
     4. eval the model on F1-score and confusion matrix.
 
-    :param train (str):   path to the training CSV file.
-    :param dev (str):     path to the development CSV file.
-    :param out_dir (str): output directory where results will be saved.
-    :param silent (bool): suppress log output (def.: False).
+    :param train_path (str): path to the training CSV file.
+    :param dev_path (str):   path to the development CSV file.
+    :param out_dir (str):    output directory where results will be saved.
+    :param silent (bool):    suppress log output (def.: False).
     '''
     utils.mkdir(out_dir)
-    log_file = utils.path_join(out_dir, "meta_data.txt")
+    log_file = utils.path_join(out_dir, "results.txt")
     utils.log_init(log_file)
 
     # step 1: load data
     utils.log("rq1: loading data", log_file, silent)
     start_time = time.time()
-    X_train, y_train = utils.load_data(args.train_csv)
-    X_dev, y_dev = utils.load_data(args.dev_csv)
+    X_train, y_train = utils.load_data(train_path)
+    X_dev, y_dev = utils.load_data(dev_path)
     elapsed_time = time.time() - start_time
     utils.log(f"    time: {elapsed_time:.2f} seconds", log_file, silent)
 
@@ -114,7 +114,7 @@ def test(train, dev, out_dir, silent=False):
 ###############################################################################
 # main ########################################################################
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Vectorize CSV file")
+    parser = argparse.ArgumentParser(description="RQ1")
     parser.add_argument('-t', '--train-csv', type=str, required=True,
                         help="Path to the train CSV file")
     parser.add_argument('-d', '--dev-csv', type=str, required=True,

@@ -75,28 +75,33 @@ if [ "$test" = "true" ]; then
     PRE_OUT_DIR="$DATA_DIR/test_dataset"
     VEC_OUT_DIR="$DATA_DIR/test_vectorized"
     TUN_OUT_DIR="$DATA_DIR/test_tuning"
-    INF_OUT_DIR="$DATA_DIR/test_models"
+    TRA_OUT_DIR="$DATA_DIR/test_models"
     RQ1_OUT_DIR="$DATA_DIR/test_rq1"
+    RQ2_OUT_DIR="$DATA_DIR/test_rq2"
 
     PRE_ARGS="-s 70/20/10 -c 70"    # chop the data to a %30 for fast testing
     TUN_ARGS="-m small"
     RQ1_ARGS=""
+    RQ2_ARGS=""
 else
     PRE_OUT_DIR="$DATA_DIR/dataset"
     VEC_OUT_DIR="$DATA_DIR/vectorized"
     TUN_OUT_DIR="$DATA_DIR/tuning"
-    INF_OUT_DIR="$DATA_DIR/models"
+    TRA_OUT_DIR="$DATA_DIR/models"
     RQ1_OUT_DIR="$DATA_DIR/rq1"
+    RQ2_OUT_DIR="$DATA_DIR/rq2"
 
     PRE_ARGS="-s 70/20/10"
     TUN_ARGS="-m big"
     RQ1_ARGS=""
+    RQ2_ARGS=""
 fi
 
 [ "$silent" = "true" ] \
     && PRE_ARGS="$PRE_ARGS --silent-analysis" \
     && TUN_ARGS="$TUN_ARGS --silent" \
-    && RQ1_ARGS="$RQ1_ARGS --silent"
+    && RQ1_ARGS="$RQ1_ARGS --silent" \
+    && RQ2_ARGS="$RQ2_ARGS --silent"
 
 # TUN_IN_DIR="$VEC_OUT_DIR/bow"
 TUN_IN_DIR="$VEC_OUT_DIR/spacy"
@@ -165,8 +170,7 @@ fi
 ## RQ1
 if $force_all || $force_rq1 || [ ! -d "$RQ1_OUT_DIR" ]; then
     bob_say "RQ1"
-    # rq1.py [-h] -t TRAIN_CSV -d DEV_CSV -o OUTPUT_DIR [-s]
-
+    # bow
     bob_cmd "python rq1.py \\
     -t $VEC_OUT_DIR/bow/train.csv \\
     -d $VEC_OUT_DIR/bow/dev.csv \\
@@ -177,6 +181,7 @@ if $force_all || $force_rq1 || [ ! -d "$RQ1_OUT_DIR" ]; then
         -d $VEC_OUT_DIR/bow/dev.csv \
         -o $RQ1_OUT_DIR/bow/ \
         $RQ1_ARGS
+    # spacy
     bob_cmd "python rq1.py \\
     -t $VEC_OUT_DIR/spacy/train.csv \\
     -d $VEC_OUT_DIR/spacy/dev.csv \\
@@ -221,36 +226,71 @@ else
 fi
 
 ## gen model and save it (train+dev)
-if $force_all || $force_inf || [ ! -d "$INF_OUT_DIR" ]; then
-    bob_say "doing inference"
+if $force_all || $force_inf || [ ! -d "$TRA_OUT_DIR" ]; then
+    bob_say "doing train"
     # rforest (base)
-    bob_cmd "python inference.py -c rforest \\
+    bob_cmd "python train.py -c rforest \\
     $TUN_IN_DIR/train.csv \\
     $TUN_IN_DIR/dev.csv \\
     -i $TUN_OUT_RFOREST_PARAMS \\
-    -o $INF_OUT_DIR/rfores.pkl"
-    time python inference.py -c rforest \
+    -o $TRA_OUT_DIR/rfores.pkl"
+    time python train.py -c rforest \
         $TUN_IN_DIR/train.csv \
         $TUN_IN_DIR/dev.csv \
         -i $TUN_OUT_RFOREST_PARAMS \
-        -o $INF_OUT_DIR/rfores.pkl
+        -o $TRA_OUT_DIR/rfores.pkl
     # stacking
-    bob_cmd "python inference.py -c stacking \\
+    bob_cmd "python train.py -c stacking \\
     $TUN_IN_DIR/train.csv \\
     $TUN_IN_DIR/dev.csv \\
     -i $TUN_OUT_RFOREST_PARAMS \\
-    -o $INF_OUT_DIR/stacking.pkl"
-    time python inference.py -c stacking \
+    -o $TRA_OUT_DIR/stacking.pkl"
+    time python train.py -c stacking \
         $TUN_IN_DIR/train.csv \
         $TUN_IN_DIR/dev.csv \
         -i $TUN_OUT_STACKING_PARAMS \
-        -o $INF_OUT_DIR/stacking.pkl
+        -o $TRA_OUT_DIR/stacking.pkl
 else
-    bob_say "skipping inference"
+    bob_say "skipping train"
 fi
 
 ## RQ2
-# TODO:
+if $force_all || $force_rq2 || [ ! -d "$RQ2_OUT_DIR" ]; then
+    bob_say "RQ2"
+    # usage: rq2.py [-h] -t TEST_CSV -p PARAMS_PATH -c {rforest,stacking} -o OUTPUT_DIR [-s] [train_csv ...]
+    # rforest (base)
+    bob_cmd "python rq2.py \\
+    $TUN_IN_DIR/train.csv $TUN_IN_DIR/dev.csv \\
+    -t $TUN_IN_DIR/test.csv \\
+    -o $RQ2_OUT_DIR/rforest/ \\
+    -p $TUN_OUT_RFOREST_PARAMS \\
+    -c rforest \\
+    $RQ2_ARGS"
+    time python rq2.py \
+        $TUN_IN_DIR/train.csv $TUN_IN_DIR/dev.csv \
+        -t $TUN_IN_DIR/test.csv \
+        -o $RQ2_OUT_DIR/rforest/ \
+        -p $TUN_OUT_RFOREST_PARAMS \
+        -c rforest \
+        $RQ2_ARGS
+    # stacking
+    bob_cmd "python rq2.py \\
+    $TUN_IN_DIR/train.csv $TUN_IN_DIR/dev.csv \\
+    -t $TUN_IN_DIR/test.csv \\
+    -o $RQ2_OUT_DIR/stacking/ \\
+    -p $TUN_OUT_RFOREST_PARAMS \\
+    -c rforest \\
+    $RQ2_ARGS"
+    time python rq2.py \
+        $TUN_IN_DIR/train.csv $TUN_IN_DIR/dev.csv \
+        -t $TUN_IN_DIR/test.csv \
+        -o $RQ2_OUT_DIR/stacking/ \
+        -p $TUN_OUT_RFOREST_PARAMS \
+        -c stacking \
+        $RQ2_ARGS
+else
+    bob_say "skipping RQ2"
+fi
 
 printf "${C1}%s${R}\n" "bob cooked (⌐■_■)"
 

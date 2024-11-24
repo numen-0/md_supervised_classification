@@ -51,7 +51,7 @@ def tuning_RandomForestClassifier(X_train, y_train, X_dev, y_dev,
         }
     }
     param_grid = param_grids.get(depth, param_grids['small'])
-    pca_components = [50, 100, 150, 200, 250]
+    pca_components = [50, 150, 250]
 
     best_score = -np.inf
     best_params = None
@@ -130,6 +130,11 @@ def tuning_StackingClassifier(X_train, y_train, X_dev, y_dev,
     :param depth: Tuning depth 'small', 'mid', 'big'
     :param silent: Bool silent output
     """
+    # HACK: ignore Warnings
+    import warnings
+    from sklearn.exceptions import ConvergenceWarning
+    warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
     print("tuning: tuning 'StackingClassifier'")
     # Merge train and dev set to perform tuning
     X_full = np.vstack((X_train, X_dev))
@@ -139,12 +144,13 @@ def tuning_StackingClassifier(X_train, y_train, X_dev, y_dev,
     # NOTE: good for CSV, LogisticRegression and Stacking; ensure consistency
     scaler = StandardScaler()
     X_full = scaler.fit_transform(X_full)
+    X_dev = scaler.transform(X_dev)
 
     verbose = 3 if not silent else 1
 
     param_grids = {
         'small': {
-            'final_estimator__max_iter': [100, 200],
+            # 'final_estimator__max_iter': [100, 200],
             'final_estimator__solver': ['lbfgs', 'liblinear'],
             'gb__n_estimators': [50, 100],
             'rf__n_estimators': [50, 100],
@@ -152,26 +158,26 @@ def tuning_StackingClassifier(X_train, y_train, X_dev, y_dev,
             'svm__kernel': ['linear'],
         },
         'mid': {
-            'final_estimator__max_iter': [100, 200, 500],
+            # 'final_estimator__max_iter': [100, 200, 500],
             'final_estimator__solver': ['lbfgs', 'liblinear'],
-            'gb__n_estimators': [50, 100, 200],
-            'rf__max_depth': [None, 10, 20],
-            'rf__n_estimators': [50, 100, 200],
+            'gb__n_estimators': [100, 200],
+            'rf__max_depth': [None, 10],
+            'rf__n_estimators': [100, 200],
             'svm__C': [0.1, 1, 10],
             'svm__kernel': ['linear', 'rbf'],
         },
         'big': {
-            'final_estimator__max_iter': [100, 200, 500, 1000],
+            # 'final_estimator__max_iter': [100, 200, 500, 1000],
             'final_estimator__solver': ['lbfgs', 'liblinear'],
-            'gb__n_estimators': [50, 100, 200, 500],
-            'rf__max_depth': [None, 10, 20, 30],
-            'rf__n_estimators': [50, 100, 200, 500],
-            'svm__C': [0.1, 1, 10, 100],
-            'svm__kernel': ['linear', 'rbf', 'poly', 'sigmoid'],
+            'gb__n_estimators': [100, 200, 500],
+            'rf__max_depth': [None, 10, 20],
+            'rf__n_estimators': [100, 200, 500],
+            'svm__C': [0.1, 1, 10],
+            'svm__kernel': ['linear', 'rbf', 'poly'],
         }
     }
     param_grid = param_grids.get(depth, param_grids['small'])
-    pca_components = [50, 100, 150, 200, 250]
+    pca_components = [50, 150, 250]
 
     best_score = -np.inf
     best_params = None
