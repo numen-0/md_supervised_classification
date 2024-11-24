@@ -1,5 +1,6 @@
 import argparse
 
+from sklearn.decomposition import PCA
 from sklearn.metrics import confusion_matrix, f1_score
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -45,6 +46,38 @@ def test(cls, X_test, y_test, out_dir, silent=False):
     cm = confusion_matrix(y_test, y_pred)
     utils.log(f"    conf. matrix:\n{cm}", log_file, silent)
     plot_cm(cm)
+
+    def plot_pca(X, y, name):
+        pca = PCA(n_components=2)
+        X_pca = pca.fit_transform(X)  # Reduce to 2D
+
+        colors = ['blue' if label == 0 else 'orange' for label in y]
+
+        plt.figure(figsize=(8, 6))
+        plt.scatter(X_pca[:, 0], X_pca[:, 1], color=colors, alpha=0.7)
+        blue_patch = plt.Line2D([0], [0], marker='o', color='w',
+                                markerfacecolor='blue', markersize=10,
+                                label="PU = 0")
+        orange_patch = plt.Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor='orange', markersize=10,
+                                  label="PU = 1")
+        plt.legend(handles=[blue_patch, orange_patch], loc='upper right')
+
+        plt.grid(True, which='both', linestyle='--', linewidth=0.5,
+                 color='gray')
+
+        plt.title(f"PCA 2D projection of {name}")
+        plt.xlabel("Component 1")
+        plt.ylabel("Component 2")
+
+        pca_plot_path = utils.path_join(out_dir, f"pca_2d_{name}.png")
+        plt.savefig(pca_plot_path)
+        plt.close()
+
+        print(f"PCA 2D projection for {name} saved to {pca_plot_path}")
+    # 2D pca proyection y_true vs y_pred
+    plot_pca(X_test, y_test, "train_true")
+    plot_pca(X_test, y_pred, "train_pred")
 
 
 ###############################################################################

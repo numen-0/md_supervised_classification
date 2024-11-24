@@ -2,11 +2,8 @@
 
 set -eu
 
-
-# Default values
-# TODO: document this in the README.md
+# Default values ##############################################################
 test=false
-# test=true
 silent=false
 force_all=false
 
@@ -17,6 +14,8 @@ force_tun=false
 force_inf=false
 force_rq2=false
 
+###############################################################################
+###############################################################################
 print_help() {
     cat <<EOF
 Usage: bob [OPTIONS]
@@ -139,6 +138,7 @@ fi
 
 ## vect
 if $force_all || $force_vec || [ ! -d "$VEC_OUT_DIR" ]; then
+    bob_say "doing getting BoW"
     BOW_FILE=$VEC_OUT_DIR/bow/BoW.csv
     bob_say "generating BoW"
     bob_cmd "python vectorization.py -i $PRE_OUT_DIR/train.csv -o $BOW_FILE -g"
@@ -165,35 +165,6 @@ if $force_all || $force_vec || [ ! -d "$VEC_OUT_DIR" ]; then
     done
 else
     bob_say "skipping vectorization"
-fi
-
-## RQ1
-if $force_all || $force_rq1 || [ ! -d "$RQ1_OUT_DIR" ]; then
-    bob_say "RQ1"
-    # bow
-    bob_cmd "python rq1.py \\
-    -t $VEC_OUT_DIR/bow/train.csv \\
-    -d $VEC_OUT_DIR/bow/dev.csv \\
-    -o $RQ1_OUT_DIR/bow/ \\
-    $RQ1_ARGS"
-    time python rq1.py \
-        -t $VEC_OUT_DIR/bow/train.csv \
-        -d $VEC_OUT_DIR/bow/dev.csv \
-        -o $RQ1_OUT_DIR/bow/ \
-        $RQ1_ARGS
-    # spacy
-    bob_cmd "python rq1.py \\
-    -t $VEC_OUT_DIR/spacy/train.csv \\
-    -d $VEC_OUT_DIR/spacy/dev.csv \\
-    -o $RQ1_OUT_DIR/spacy/ \\
-    $RQ1_ARGS"
-    time python rq1.py \
-        -t $VEC_OUT_DIR/spacy/train.csv \
-        -d $VEC_OUT_DIR/spacy/dev.csv \
-        -o $RQ1_OUT_DIR/spacy/ \
-        $RQ1_ARGS
-else
-    bob_say "skipping RQ1"
 fi
 
 ## tuning
@@ -254,10 +225,39 @@ else
     bob_say "skipping train"
 fi
 
+## RQ1
+if $force_all || $force_rq1 || [ ! -d "$RQ1_OUT_DIR" ]; then
+    bob_say "RQ1"
+    # bow
+    bob_cmd "python rq1.py \\
+    -t $VEC_OUT_DIR/bow/train.csv \\
+    -d $VEC_OUT_DIR/bow/dev.csv \\
+    -o $RQ1_OUT_DIR/bow/ \\
+    $RQ1_ARGS"
+    time python rq1.py \
+        -t $VEC_OUT_DIR/bow/train.csv \
+        -d $VEC_OUT_DIR/bow/dev.csv \
+        -o $RQ1_OUT_DIR/bow/ \
+        $RQ1_ARGS
+    # spacy
+    bob_cmd "python rq1.py \\
+    -t $VEC_OUT_DIR/spacy/train.csv \\
+    -d $VEC_OUT_DIR/spacy/dev.csv \\
+    -o $RQ1_OUT_DIR/spacy/ \\
+    $RQ1_ARGS"
+    time python rq1.py \
+        -t $VEC_OUT_DIR/spacy/train.csv \
+        -d $VEC_OUT_DIR/spacy/dev.csv \
+        -o $RQ1_OUT_DIR/spacy/ \
+        $RQ1_ARGS
+else
+    bob_say "skipping RQ1"
+fi
+
+
 ## RQ2
 if $force_all || $force_rq2 || [ ! -d "$RQ2_OUT_DIR" ]; then
     bob_say "RQ2"
-    # usage: rq2.py [-h] -t TEST_CSV -p PARAMS_PATH -c {rforest,stacking} -o OUTPUT_DIR [-s] [train_csv ...]
     # rforest (base)
     bob_cmd "python rq2.py \\
     $TUN_IN_DIR/train.csv $TUN_IN_DIR/dev.csv \\
