@@ -5,19 +5,17 @@ set -eu
 
 # Default values
 # TODO: document this in the README.md
-# test=false
-# silent=false
+test=false
+# test=true
+silent=false
 force_all=false
 
-force_pre=false # TODO: implement this stuff
+force_pre=false
 force_vec=false
-# force_q1=false
+force_rq1=false
 force_tun=false
 force_inf=false
-# force_q2=false
-
-test=true
-silent=true
+force_rq2=false
 
 print_help() {
     cat <<EOF
@@ -36,6 +34,10 @@ OPTIONS:
         force tuning
     -I, --force-inference
         force inference
+    -q1, --force-rq1
+        force rq1
+    -q2, --force-rq2
+        force rq2
     -s, --silent
         silent the programs that can be silent
     -h, --help
@@ -53,6 +55,8 @@ while [ $# -gt 0 ]; do
     -V|--force-vectorization)   force_vec=true ;;
     -T|--force-tuning)          force_tun=true ;;
     -I|--force-inference)       force_inf=true ;;
+    -q1|--force-rq1)            force_rq1=true ;;
+    -q2|--force-rq2)            force_rq2=true ;;
     -h|--help)                  print_help; exit 0 ;;
     *)
         echo "Unknown flag: $1" >&2
@@ -72,22 +76,27 @@ if [ "$test" = "true" ]; then
     VEC_OUT_DIR="$DATA_DIR/test_vectorized"
     TUN_OUT_DIR="$DATA_DIR/test_tuning"
     INF_OUT_DIR="$DATA_DIR/test_models"
+    RQ1_OUT_DIR="$DATA_DIR/test_rq1"
 
     PRE_ARGS="-s 70/20/10 -c 70"    # chop the data to a %30 for fast testing
     TUN_ARGS="-m small"
+    RQ1_ARGS=""
 else
     PRE_OUT_DIR="$DATA_DIR/dataset"
     VEC_OUT_DIR="$DATA_DIR/vectorized"
     TUN_OUT_DIR="$DATA_DIR/tuning"
     INF_OUT_DIR="$DATA_DIR/models"
+    RQ1_OUT_DIR="$DATA_DIR/rq1"
 
     PRE_ARGS="-s 70/20/10"
     TUN_ARGS="-m big"
+    RQ1_ARGS=""
 fi
 
 [ "$silent" = "true" ] \
     && PRE_ARGS="$PRE_ARGS --silent-analysis" \
-    && TUN_ARGS="$TUN_ARGS --silent"
+    && TUN_ARGS="$TUN_ARGS --silent" \
+    && RQ1_ARGS="$RQ1_ARGS --silent"
 
 # TUN_IN_DIR="$VEC_OUT_DIR/bow"
 TUN_IN_DIR="$VEC_OUT_DIR/spacy"
@@ -153,8 +162,34 @@ else
     bob_say "skipping vectorization"
 fi
 
-## minitest (vectorization)
-# TODO:
+## RQ1
+if $force_all || $force_rq1 || [ ! -d "$RQ1_OUT_DIR" ]; then
+    bob_say "RQ1"
+    # rq1.py [-h] -t TRAIN_CSV -d DEV_CSV -o OUTPUT_DIR [-s]
+
+    bob_cmd "python rq1.py \\
+    -t $VEC_OUT_DIR/bow/train.csv \\
+    -d $VEC_OUT_DIR/bow/dev.csv \\
+    -o $RQ1_OUT_DIR/bow/ \\
+    $RQ1_ARGS"
+    time python rq1.py \
+        -t $VEC_OUT_DIR/bow/train.csv \
+        -d $VEC_OUT_DIR/bow/dev.csv \
+        -o $RQ1_OUT_DIR/bow/ \
+        $RQ1_ARGS
+    bob_cmd "python rq1.py \\
+    -t $VEC_OUT_DIR/spacy/train.csv \\
+    -d $VEC_OUT_DIR/spacy/dev.csv \\
+    -o $RQ1_OUT_DIR/spacy/ \\
+    $RQ1_ARGS"
+    time python rq1.py \
+        -t $VEC_OUT_DIR/spacy/train.csv \
+        -d $VEC_OUT_DIR/spacy/dev.csv \
+        -o $RQ1_OUT_DIR/spacy/ \
+        $RQ1_ARGS
+else
+    bob_say "skipping RQ1"
+fi
 
 ## tuning
 if $force_all || $force_tun || [ ! -d "$TUN_OUT_DIR" ]; then
@@ -214,7 +249,7 @@ else
     bob_say "skipping inference"
 fi
 
-## test models (vs test)
+## RQ2
 # TODO:
 
 printf "${C1}%s${R}\n" "bob cooked (⌐■_■)"

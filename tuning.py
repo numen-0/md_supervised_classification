@@ -279,6 +279,7 @@ if __name__ == "__main__":
     except SystemExit:
         exit(1)
 
+    print("tuning: loading data")
     X_train, y_train = utils.load_data(args.train_csv)
     X_dev, y_dev = utils.load_data(args.dev_csv)
 
