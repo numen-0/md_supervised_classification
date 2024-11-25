@@ -3,7 +3,7 @@ import time
 
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix, f1_score
+from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -104,8 +104,8 @@ def test(train_path, dev_path, out_dir, silent=False):
 
     utils.log("rq3: evaluating model", log_file, silent)
     y_pred = clf.predict(X_dev)
-    fscore = f1_score(y_dev, y_pred, average='weighted')
-    utils.log(f"    f-score: {fscore:.4f}", log_file, silent)
+    fscore = classification_report(y_dev, y_pred, labels=[0, 1])
+    utils.log(f"{fscore}", log_file, silent)
     cm = confusion_matrix(y_dev, y_pred)
     utils.log(f"    conf. matrix:\n{cm}", log_file, silent)
     plot_cm(cm)

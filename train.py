@@ -11,6 +11,67 @@ import numpy as np
 import utils
 
 
+def train_GradientBoostingClassifier(X_train, y_train, params):
+    """
+    Train a GradientBoostingClassifier with the given parameters.
+    :param X_train: feature data for training
+    :param y_train: target labels for training
+    :param params: dictionary containing the params for GradientBoostingCls
+    :return: trained GradientBoostingClassifier model
+    :return: used pca | None
+    """
+    # Extract PCA components if specified
+    n_components = params.get("PCA", None)
+    pca = None
+    if n_components is not None:
+        print(f"\tapplying PCA with {n_components} components")
+        pca = PCA(n_components=n_components)
+        X_train = pca.fit_transform(X_train)
+
+    # Extract GradientBoostingClassifier parameters
+    gb_params = params.get("CLS", {})
+    gb_params.setdefault("random_state", 42)  # Ensure reproducibility
+
+    # Train the GradientBoostingClassifier
+    print("\ttraining cls with parameters: \n", gb_params)
+    cls = GradientBoostingClassifier(**gb_params)
+    cls.fit(X_train, y_train)
+    return cls, pca
+
+
+def train_SVC(X_train, y_train, params):
+    """
+    Train an SVC with the given parameters.
+    :param X_train: feature data for training
+    :param y_train: target labels for training
+    :param params: dictionary containing the params for SVC
+    :return: trained SVC model
+    :return: used pca | None
+    """
+    # Extract PCA components if specified
+    n_components = params.get("PCA", None)
+    pca = None
+    if n_components is not None:
+        print(f"\tapplying PCA with {n_components} components")
+        pca = PCA(n_components=n_components)
+        X_train = pca.fit_transform(X_train)
+
+    # Standardize features for SVC
+    print("\tapplying StandardScaler for SVC")
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+
+    # Extract SVC parameters
+    svc_params = params.get("CLS", {})
+    svc_params.setdefault("random_state", 42)  # Ensure reproducibility
+
+    # Train the SVC
+    print("\ttraining cls with parameters: \n", svc_params)
+    cls = SVC(**svc_params)
+    cls.fit(X_train, y_train)
+    return cls, pca
+
+
 def train_RandomForestClassifier(X_train, y_train, params):
     """
     Train a RandomForestClassifier with the given parameters.
@@ -137,9 +198,10 @@ if __name__ == "__main__":
                         help="Path to the JSON file with params")
     parser.add_argument('-o', '--output-file', type=str, required=True,
                         help="Output file to save the model.pkl")
-    parser.add_argument('-c', '--classifier', choices=['rforest', 'stacking'],
-                        required=True,
-                        help="Train either 'rforest' or 'stacking' classifier")
+    parser.add_argument('-c', '--classifier', required=True,
+                        choices=['rforest', 'stacking', 'svc', 'gradient'],
+                        help="Train one of the supported classifiers: "
+                             "'rforest', 'stacking', 'svc', 'gradient'")
 
     try:
         args = parser.parse_args()
@@ -155,6 +217,12 @@ if __name__ == "__main__":
     if args.classifier == "rforest":
         print("train: training 'RandomForestClassifier'")
         cls, _ = train_RandomForestClassifier(X_train, y_train, params)
+    elif args.classifier == "svc":
+        print("train: training 'SVC'")
+        cls, _ = train_SVC(X_train, y_train, params)
+    elif args.classifier == "gradient":
+        print("train: training 'GradientBoostingClassifier'")
+        cls, _ = train_GradientBoostingClassifier(X_train, y_train, params)
     elif args.classifier == "stacking":
         print("train: training 'StackingClassifier'")
         cls, _ = train_StackingClassifier(X_train, y_train, params)

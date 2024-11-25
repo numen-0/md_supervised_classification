@@ -1,0 +1,16 @@
+{
+    "PCA": 50,
+    "CLS": {
+        "final_estimator__solver": "lbfgs",
+        "gb__n_estimators": 50,
+        "rf__n_estimators": 50,
+        "svm__C": 0.1,
+        "svm__kernel": "linear",
+        "random_state": 42,
+        "class_weight": "balanced"
+    },
+    "score": {
+        "accuracy": 0.5352112676056338,
+        "f1": 0.37735849056603776
+    }
+}

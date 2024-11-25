@@ -1,0 +1,13 @@
+{
+    "PCA": 50,
+    "CLS": {
+        "max_depth": 10,
+        "n_estimators": 100,
+        "random_state": 42,
+        "class_weight": "balanced"
+    },
+    "score": {
+        "accuracy": 0.6056338028169014,
+        "f1": 0.5254237288135594
+    }
+}

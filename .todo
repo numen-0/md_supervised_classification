@@ -4,10 +4,10 @@
 ./bob:
 [X] add preprocess
 [X] add vectorization
-[X] add testing RQ1
 [X] add tuning
 [X] add train_model
-[_] add testing RQ2
+[X] add testing RQ1
+[X] add testing RQ2
 ./preprocess.py:
 [X] do the thing
 ./vectorization.py:
@@ -19,8 +19,9 @@
 ./train.py:
 [X] do the thing
 ./rq2.py:
-[_] do the thing
-[_] load the models and test them
-[_] save results
+[X] do the thing
+./rqextra.py:
+[_] eval random clasifier
 proyect:
 [_] README.md
+    [_] add rqextra

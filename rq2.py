@@ -1,7 +1,7 @@
 import argparse
 
 from sklearn.decomposition import PCA
-from sklearn.metrics import confusion_matrix, f1_score
+from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -41,8 +41,8 @@ def test(cls, X_test, y_test, out_dir, silent=False):
 
     utils.log("rq2: evaluating model", log_file, silent)
     y_pred = cls.predict(X_test)
-    fscore = f1_score(y_test, y_pred, average='weighted')
-    utils.log(f"    f-score: {fscore:.4f}", log_file, silent)
+    fscore = classification_report(y_test, y_pred, labels=[0, 1])
+    utils.log(f"{fscore}", log_file, silent)
     cm = confusion_matrix(y_test, y_pred)
     utils.log(f"    conf. matrix:\n{cm}", log_file, silent)
     plot_cm(cm)
@@ -90,9 +90,10 @@ if __name__ == "__main__":
                         help="Path to the train CSV file")
     parser.add_argument('-p', '--params-path', type=str, required=True,
                         help="Path to the JSON file with params")
-    parser.add_argument('-c', '--classifier', choices=['rforest', 'stacking'],
-                        required=True,
-                        help="Train either 'rforest' or 'stacking' classifier")
+    parser.add_argument('-c', '--classifier', required=True,
+                        choices=['rforest', 'stacking', 'svc', 'gradient'],
+                        help="Test one of the supported classifiers: "
+                             "'rforest', 'stacking', 'svc', 'gradient'")
     parser.add_argument('-o', '--output-dir', type=str, required=True,
                         help="Output directory to save results")
     parser.add_argument('-s', '--silent', action='store_true',
@@ -113,6 +114,13 @@ if __name__ == "__main__":
     if args.classifier == "rforest":
         print("rq2: training 'RandomForestClassifier'")
         cls, pca = train.train_RandomForestClassifier(X_train, y_train, params)
+    elif args.classifier == "svc":
+        print("rq2: training 'SVC'")
+        cls, pca = train.train_SVC(X_train, y_train, params)
+    elif args.classifier == "gradient":
+        print("rq2: training 'GradientBoostingClassifier'")
+        cls, pca = train.train_GradientBoostingClassifier(X_train, y_train,
+                                                          params)
     elif args.classifier == "stacking":
         print("rq2: training 'StackingClassifier'")
         cls, pca = train.train_StackingClassifier(X_train, y_train, params)

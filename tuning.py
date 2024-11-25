@@ -14,22 +14,161 @@ import numpy as np
 import utils
 
 
-def tuning_RandomForestClassifier(X_train, y_train, X_dev, y_dev,
-                                  output_file, depth='small', silent=False):
+def tuning_SVC(X_full, y_full, depth='small', silent=False):
     """
-    Train and evaluate a RandomForestClassifier on the provided dataset.
-    :param X_train: Training feature data
-    :param y_train: Training target labels
-    :param X_dev: Test feature data
-    :param y_dev: Test target labels
-    :param output_file: Path to the file where the tuning results will be saved
+    Train and evaluate an SVC on the provided dataset.
+    :param X_full: Training data train+dev
+    :param y_full: Training data labels
     :param depth: Tuning depth 'small', 'mid', 'big'
     :param silent: Bool silent output
+    :return (best_model, best_params, best_pca_n)
+    """
+    print("tuning: tuning 'SVC'")
+
+    verbose = 3 if not silent else 1
+
+    param_grids = {
+        'small': {
+            'C': [0.1, 1],
+            'kernel': ['linear', 'rbf'],
+        },
+        'mid': {
+            'C': [0.1, 1, 10],
+            'kernel': ['linear', 'rbf', 'poly'],
+            'gamma': ['scale', 'auto'],
+        },
+        'big': {
+            'C': [0.1, 1, 10, 100],
+            'kernel': ['linear', 'rbf', 'poly', 'sigmoid'],
+            'gamma': ['scale', 'auto'],
+        }
+    }
+    param_grid = param_grids.get(depth, param_grids['small'])
+    pca_components = [50, 150, 250]
+
+    best_score = -np.inf
+    best_params = None
+    best_model = None
+    best_pca_n = None
+
+    for i, n_components in enumerate(pca_components):
+        print(f"[loop {i + 1} of {len(pca_components)}]-->")
+        print(f"Testing PCA with {n_components} components...")
+
+        start_time = time.time()
+
+        # Apply PCA transformation
+        pca = PCA(n_components=n_components)
+        X_full_pca = pca.fit_transform(X_full)
+
+        # Perform grid search
+        grid_search = GridSearchCV(
+            estimator=SVC(random_state=42, class_weight='balanced'),
+            param_grid=param_grid,
+            scoring='f1',
+            cv=3,
+            verbose=verbose
+        )
+        grid_search.fit(X_full_pca, y_full)
+
+        if grid_search.best_score_ > best_score:
+            best_score = grid_search.best_score_
+            best_params = grid_search.best_params_
+            best_model = grid_search.best_estimator_
+            best_pca_n = n_components
+        elapsed_time = time.time() - start_time
+        print(f"--> [time {elapsed_time:.2f} seconds]")
+
+    best_params["random_state"] = 42
+    best_params["class_weight"] = "balanced"
+
+    return best_model, best_params, best_pca_n
+
+
+def tuning_GradientBoostingClassifier(X_full, y_full, depth='small',
+                                      silent=False):
+    """
+    :param X_full: Training data train+dev
+    :param y_full: Training data labels
+    :param depth: Tuning depth 'small', 'mid', 'big'
+    :param silent: Bool silent output
+    :return (best_model, best_params, best_pca_n)
+    """
+    print("tuning: tuning 'GradientBoostingClassifier'")
+
+    verbose = 3 if not silent else 1
+
+    param_grids = {
+        'small': {
+            'n_estimators': [50, 100],
+            'learning_rate': [0.1, 0.01],
+            'max_depth': [3, 5],
+        },
+        'mid': {
+            'n_estimators': [50, 100, 200],
+            'learning_rate': [0.1, 0.05, 0.01],
+            'max_depth': [3, 5, 10],
+            'subsample': [0.8, 1.0],
+        },
+        'big': {
+            'n_estimators': [50, 100, 200, 500],
+            'learning_rate': [0.1, 0.05, 0.01, 0.005],
+            'max_depth': [3, 5, 10, 20],
+            'subsample': [0.6, 0.8, 1.0],
+            'min_samples_split': [2, 5, 10],
+        }
+    }
+    param_grid = param_grids.get(depth, param_grids['small'])
+    pca_components = [50, 150, 250]
+
+    best_score = -np.inf
+    best_params = None
+    best_model = None
+    best_pca_n = None
+
+    for i, n_components in enumerate(pca_components):
+        print(f"[loop {i + 1} of {len(pca_components)}]-->")
+        print(f"Testing PCA with {n_components} components...")
+
+        start_time = time.time()
+
+        # Apply PCA transformation
+        pca = PCA(n_components=n_components)
+        X_full_pca = pca.fit_transform(X_full)
+
+        # Perform grid search
+        grid_search = GridSearchCV(
+            estimator=GradientBoostingClassifier(random_state=42),
+            param_grid=param_grid,
+            scoring='f1',
+            cv=3,
+            verbose=verbose
+        )
+        grid_search.fit(X_full_pca, y_full)
+
+        if grid_search.best_score_ > best_score:
+            best_score = grid_search.best_score_
+            best_params = grid_search.best_params_
+            best_model = grid_search.best_estimator_
+            best_pca_n = n_components
+        elapsed_time = time.time() - start_time
+        print(f"--> [time {elapsed_time:.2f} seconds]")
+
+    best_params["random_state"] = 42
+
+    return best_model, best_params, best_pca_n
+
+
+def tuning_RandomForestClassifier(X_full, y_full, depth='small', silent=False):
+    """
+    Train and evaluate a RandomForestClassifier on the provided dataset.
+    :param X_full: Training data train+dev
+    :param y_full: Training data labels
+    :param depth: Tuning depth 'small', 'mid', 'big'
+    :param silent: Bool silent output
+    :return (best_model, best_params, best_pca_n)
     """
     print("tuning: tuning 'RandomForestClassifier'")
-    # Merge train and dev set to perform tuning
-    X_full = np.vstack((X_train, X_dev))
-    y_full = np.hstack((y_train, y_dev))
 
     verbose = 3 if not silent else 1
 
@@ -90,45 +229,19 @@ def tuning_RandomForestClassifier(X_train, y_train, X_dev, y_dev,
     best_params["random_state"] = 42
     best_params["class_weight"] = "balanced"
 
-    # Evaluate on dev set using the best model
-    pca = PCA(n_components=best_pca_n).fit(X_train)
-    X_dev_pca = pca.transform(X_dev)
-    y_pred = best_model.predict(X_dev_pca)
-    accuracy = accuracy_score(y_dev, y_pred)
-    f1 = f1_score(y_dev, y_pred)
-
-    print("\ntuning: results")
-    print(f"\tBest PCA Components: {best_pca_n}")
-    print(f"\tBest Parameters: {best_params}")
-    print(f"\tDev Set Accuracy: {accuracy:.4f}")
-    print(f"\tDev Set F1 Score: {f1:.4f}")
-
-    # Save results to JSON
-    results = {
-        "PCA": best_pca_n,
-        "CLS": best_params,
-        "score": {
-            "accuracy": accuracy,
-            "f1": f1
-        }
-    }
-    utils.mkdir(utils.path_dirname(output_file))
-    utils.json_save(results, output_file)
-    print("tuning: done")
+    return best_model, best_params, best_pca_n
 
 
-def tuning_StackingClassifier(X_train, y_train, X_dev, y_dev,
-                              output_file, depth='small', silent=False):
+def tuning_StackingClassifier(X_full, y_full,
+                              depth='small', silent=False):
     """
     Train and evaluate a StackingClassifier with multiple base estimators and a
     LogisticRegression meta-estimator.
-    :param X_train: Training feature data
-    :param y_train: Training target labels
-    :param X_dev: Test feature data
-    :param y_dev: Test target labels
-    :param output_file: Path to the file where the tuning results will be saved
+    :param X_full: Training data train+dev
+    :param y_full: Training data labels
     :param depth: Tuning depth 'small', 'mid', 'big'
     :param silent: Bool silent output
+    :return (best_model, best_params, best_pca_n)
     """
     # HACK: ignore Warnings
     import warnings
@@ -136,15 +249,6 @@ def tuning_StackingClassifier(X_train, y_train, X_dev, y_dev,
     warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
     print("tuning: tuning 'StackingClassifier'")
-    # Merge train and dev set to perform tuning
-    X_full = np.vstack((X_train, X_dev))
-    y_full = np.hstack((y_train, y_dev))
-
-    # Standardize features
-    # NOTE: good for CSV, LogisticRegression and Stacking; ensure consistency
-    scaler = StandardScaler()
-    X_full = scaler.fit_transform(X_full)
-    X_dev = scaler.transform(X_dev)
 
     verbose = 3 if not silent else 1
 
@@ -177,7 +281,8 @@ def tuning_StackingClassifier(X_train, y_train, X_dev, y_dev,
         }
     }
     param_grid = param_grids.get(depth, param_grids['small'])
-    pca_components = [50, 150, 250]
+    # pca_components = [50, 150, 250]
+    pca_components = [50]  # al menos nos toca esperar unas 2h
 
     best_score = -np.inf
     best_params = None
@@ -234,46 +339,22 @@ def tuning_StackingClassifier(X_train, y_train, X_dev, y_dev,
     best_params["random_state"] = 42
     best_params["class_weight"] = "balanced"
 
-    # Evaluate on dev set using the best model
-    pca = PCA(n_components=best_pca_n).fit(X_train)
-    X_dev_pca = pca.transform(X_dev)
-    y_pred = best_model.predict(X_dev_pca)
-    accuracy = accuracy_score(y_dev, y_pred)
-    f1 = f1_score(y_dev, y_pred)
-
-    print("\ntuning: results")
-    print(f"\tBest PCA Components: {best_pca_n}")
-    print(f"\tBest Parameters: {best_params}")
-    print(f"\tDev Set Accuracy: {accuracy:.4f}")
-    print(f"\tDev Set F1 Score: {f1:.4f}")
-
-    # Save results to JSON
-    results = {
-        "PCA": best_pca_n,
-        "CLS": best_params,
-        "score": {
-            "accuracy": accuracy,
-            "f1": f1
-        }
-    }
-    utils.mkdir(utils.path_dirname(output_file))
-    utils.json_save(results, output_file)
-    print("tuning: done")
+    return best_model, best_params, best_pca_n
 
 
 ###############################################################################
 # main ########################################################################
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Vectorize CSV file")
+    parser = argparse.ArgumentParser(description="Do tuning for selected cls")
     parser.add_argument('-t', '--train-csv', type=str, required=True,
                         help="Path to the train CSV file")
     parser.add_argument('-d', '--dev-csv', type=str, required=True,
                         help="Path to the dev CSV file")
     parser.add_argument('-o', '--output-file', type=str, required=True,
                         help="Output file to save the tuning results (JSON)")
-    parser.add_argument('-c', '--classifier', choices=['rforest', 'stacking'],
-                        required=True,
-                        help="Do tuning for 'rforest' or 'stacking' cls")
+    parser.add_argument('-c', '--classifier', required=True,
+                        choices=['rforest', 'stacking', 'gradient', 'svc'],
+                        help="Do tuning for {rforest,stacking,gradient,svc}")
     parser.add_argument('-m', '--tuning-depth', choices=['small', 'mid', 'big'],
                         default='small',
                         help="Tuning depth: 'small', 'mid', 'big'; def.: small")
@@ -288,18 +369,60 @@ if __name__ == "__main__":
     print("tuning: loading data")
     X_train, y_train = utils.load_data(args.train_csv)
     X_dev, y_dev = utils.load_data(args.dev_csv)
+    # Merge train and dev set to perform tuning
+    X_full = np.vstack((X_train, X_dev))
+    y_full = np.hstack((y_train, y_dev))
 
     if args.classifier == "rforest":
-        tuning_RandomForestClassifier(X_train, y_train, X_dev, y_dev,
-                                      args.output_file, args.tuning_depth,
-                                      args.silent)
+        tuning_cls = tuning_RandomForestClassifier
+    elif args.classifier == "gradient":
+        tuning_cls = tuning_GradientBoostingClassifier
+    elif args.classifier == "svc":
+        # Standardize features
+        # NOTE: good for CSV, LogisticRegression and Stacking, ensures
+        #       consistency
+        scaler = StandardScaler()
+        X_full = scaler.fit_transform(X_full)
+        X_dev = scaler.transform(X_dev)
+        tuning_cls = tuning_SVC
     elif args.classifier == "stacking":
-        tuning_StackingClassifier(X_train, y_train, X_dev, y_dev,
-                                  args.output_file, args.tuning_depth,
-                                  args.silent)
+        scaler = StandardScaler()
+        X_full = scaler.fit_transform(X_full)
+        X_dev = scaler.transform(X_dev)
+        tuning_cls = tuning_StackingClassifier
     else:
         print("tuning: Unknown classifier")
         exit(1)
+
+    model, params, pca_n = tuning_cls(X_full, y_full, depth=args.tuning_depth,
+                                      silent=args.silent)
+
+    print("tuning: done")
+    # Evaluate on dev set using the best model
+    pca = PCA(n_components=pca_n).fit(X_train)
+    X_dev_pca = pca.transform(X_dev)
+    y_pred = model.predict(X_dev_pca)
+    accuracy = accuracy_score(y_dev, y_pred)
+    f1 = f1_score(y_dev, y_pred)
+
+    print("\ntuning: results")
+    print(f"\tBest PCA Components: {pca_n}")
+    print(f"\tBest Parameters: {params}")
+    print(f"\tDev Set Accuracy: {accuracy:.4f}")
+    print(f"\tDev Set F1 Score: {f1:.4f}")
+
+    # Save results to JSON
+    results = {
+        "PCA": pca_n,
+        "CLS": params,
+        "score": {
+            "accuracy": accuracy,
+            "f1": f1
+        }
+    }
+
+    utils.mkdir(utils.path_dirname(args.output_file))
+    utils.json_save(results, args.output_file)
 
 """
 1. Diversity in Base Estimators

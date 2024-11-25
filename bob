@@ -9,10 +9,11 @@ force_all=false
 
 force_pre=false
 force_vec=false
-force_rq1=false
 force_tun=false
-force_inf=false
+force_tra=false
+force_rq1=false
 force_rq2=false
+force_rqe=false
 
 ###############################################################################
 ###############################################################################
@@ -31,12 +32,14 @@ OPTIONS:
         force vectorization
     -T, --force-tuning
         force tuning
-    -I, --force-inference
-        force inference
+    -I, --force-training
+        force training
     -q1, --force-rq1
         force rq1
     -q2, --force-rq2
         force rq2
+    -qe, --force-rqext
+        force rqext
     -s, --silent
         silent the programs that can be silent
     -h, --help
@@ -53,9 +56,10 @@ while [ $# -gt 0 ]; do
     -P|--force-preprocess)      force_pre=true ;;
     -V|--force-vectorization)   force_vec=true ;;
     -T|--force-tuning)          force_tun=true ;;
-    -I|--force-inference)       force_inf=true ;;
+    -I|--force-training)        force_tra=true ;;
     -q1|--force-rq1)            force_rq1=true ;;
     -q2|--force-rq2)            force_rq2=true ;;
+    -qe|--force-rqext)          force_rqe=true ;;
     -h|--help)                  print_help; exit 0 ;;
     *)
         echo "Unknown flag: $1" >&2
@@ -77,11 +81,10 @@ if [ "$test" = "true" ]; then
     TRA_OUT_DIR="$DATA_DIR/test_models"
     RQ1_OUT_DIR="$DATA_DIR/test_rq1"
     RQ2_OUT_DIR="$DATA_DIR/test_rq2"
+    RQE_OUT_DIR="$DATA_DIR/test_rqext"
 
-    PRE_ARGS="-s 70/20/10 -c 70"    # chop the data to a %30 for fast testing
+    PRE_ARGS="-s 70/20/10 -c 70" # chop the data to a %30 for fast testing
     TUN_ARGS="-m small"
-    RQ1_ARGS=""
-    RQ2_ARGS=""
 else
     PRE_OUT_DIR="$DATA_DIR/dataset"
     VEC_OUT_DIR="$DATA_DIR/vectorized"
@@ -89,23 +92,23 @@ else
     TRA_OUT_DIR="$DATA_DIR/models"
     RQ1_OUT_DIR="$DATA_DIR/rq1"
     RQ2_OUT_DIR="$DATA_DIR/rq2"
+    RQE_OUT_DIR="$DATA_DIR/rqext"
 
     PRE_ARGS="-s 70/20/10"
     TUN_ARGS="-m big"
-    RQ1_ARGS=""
-    RQ2_ARGS=""
 fi
+RQ1_ARGS=""
+RQ2_ARGS=""
+RQE_ARGS=""
 
 [ "$silent" = "true" ] \
     && PRE_ARGS="$PRE_ARGS --silent-analysis" \
     && TUN_ARGS="$TUN_ARGS --silent" \
     && RQ1_ARGS="$RQ1_ARGS --silent" \
-    && RQ2_ARGS="$RQ2_ARGS --silent"
+    && RQ2_ARGS="$RQ2_ARGS --silent" \
+    && RQE_ARGS="$RQE_ARGS --silent" \
 
-# TUN_IN_DIR="$VEC_OUT_DIR/bow"
 TUN_IN_DIR="$VEC_OUT_DIR/spacy"
-TUN_OUT_RFOREST_PARAMS="$TUN_OUT_DIR/rforest_params.json"
-TUN_OUT_STACKING_PARAMS="$TUN_OUT_DIR/stacking_params.json"
 
 ## func #######################################################################
 C1="\e[32;1m"
@@ -138,11 +141,17 @@ fi
 
 ## vect
 if $force_all || $force_vec || [ ! -d "$VEC_OUT_DIR" ]; then
-    bob_say "doing getting BoW"
+    bob_say "getting BoW"
     BOW_FILE=$VEC_OUT_DIR/bow/BoW.csv
     bob_say "generating BoW"
-    bob_cmd "python vectorization.py -i $PRE_OUT_DIR/train.csv -o $BOW_FILE -g"
-    time python vectorization.py -i $PRE_OUT_DIR/train.csv -o $BOW_FILE -g
+    bob_cmd "python vectorization.py \\
+    -i $PRE_OUT_DIR/train.csv \\
+    -o $BOW_FILE \\
+    -g"
+    time python vectorization.py \
+        -i $PRE_OUT_DIR/train.csv \
+        -o $BOW_FILE \
+        -g
 
     bob_say "doing vectorization"
     for f in train.csv dev.csv test.csv; do
@@ -170,59 +179,56 @@ fi
 ## tuning
 if $force_all || $force_tun || [ ! -d "$TUN_OUT_DIR" ]; then
     bob_say "tuning some params"
-    # rforest (base)
-    bob_cmd "python tuning.py \\
+    for cls in rforest gradient svc stacking; do
+        bob_cmd "python tuning.py \\
     -t $TUN_IN_DIR/train.csv \\
     -d $TUN_IN_DIR/dev.csv \\
-    -o $TUN_OUT_RFOREST_PARAMS \\
-    $TUN_ARGS -c rforest"
-    time python tuning.py \
-        -t $TUN_IN_DIR/train.csv \
-        -d $TUN_IN_DIR/dev.csv \
-        -o $TUN_OUT_RFOREST_PARAMS \
-        $TUN_ARGS -c rforest
-    # stacking
-    bob_cmd "python tuning.py \\
-    -t $TUN_IN_DIR/train.csv \\
-    -d $TUN_IN_DIR/dev.csv \\
-    -o $TUN_OUT_STACKING_PARAMS \\
-    $TUN_ARGS -c stacking"
-    time python tuning.py \
-        -t $TUN_IN_DIR/train.csv \
-        -d $TUN_IN_DIR/dev.csv \
-        -o $TUN_OUT_STACKING_PARAMS \
-        $TUN_ARGS -c stacking
+    -o $TUN_OUT_DIR/${cls}_params.json \\
+    -c $cls $TUN_ARGS"
+        time python tuning.py \
+            -t $TUN_IN_DIR/train.csv \
+            -d $TUN_IN_DIR/dev.csv \
+            -o "$TUN_OUT_DIR/${cls}_params.json" \
+            -c $cls $TUN_ARGS
+    done
 else
     bob_say "skipping tuning"
 fi
 
 ## gen model and save it (train+dev)
-if $force_all || $force_inf || [ ! -d "$TRA_OUT_DIR" ]; then
+if $force_all || $force_tra || [ ! -d "$TRA_OUT_DIR" ]; then
     bob_say "doing train"
-    # rforest (base)
-    bob_cmd "python train.py -c rforest \\
+    for cls in rforest gradient svc stacking; do
+        bob_cmd "python train.py \\
     $TUN_IN_DIR/train.csv \\
     $TUN_IN_DIR/dev.csv \\
-    -i $TUN_OUT_RFOREST_PARAMS \\
-    -o $TRA_OUT_DIR/rfores.pkl"
-    time python train.py -c rforest \
-        $TUN_IN_DIR/train.csv \
-        $TUN_IN_DIR/dev.csv \
-        -i $TUN_OUT_RFOREST_PARAMS \
-        -o $TRA_OUT_DIR/rfores.pkl
-    # stacking
-    bob_cmd "python train.py -c stacking \\
-    $TUN_IN_DIR/train.csv \\
-    $TUN_IN_DIR/dev.csv \\
-    -i $TUN_OUT_RFOREST_PARAMS \\
-    -o $TRA_OUT_DIR/stacking.pkl"
-    time python train.py -c stacking \
-        $TUN_IN_DIR/train.csv \
-        $TUN_IN_DIR/dev.csv \
-        -i $TUN_OUT_STACKING_PARAMS \
-        -o $TRA_OUT_DIR/stacking.pkl
+    -i $TUN_OUT_DIR/${cls}_params.json \\
+    -o $TRA_OUT_DIR/$cls.pkl \\
+    -c $cls"
+        time python train.py \
+            $TUN_IN_DIR/train.csv \
+            $TUN_IN_DIR/dev.csv \
+            -i $TUN_OUT_DIR/${cls}_params.json \
+            -o "$TRA_OUT_DIR/$cls.pkl" \
+            -c $cls
+    done
 else
     bob_say "skipping train"
+fi
+
+## RQext
+if $force_all || $force_rqe || [ ! -d "$RQE_OUT_DIR" ]; then
+    bob_say "RQext"
+    bob_cmd "python rqextra.py \\
+    -t $TUN_IN_DIR/test.csv \\
+    -o $RQE_OUT_DIR/results.txt \\
+    $RQE_ARGS"
+    time python rqextra.py \
+        -t $TUN_IN_DIR/test.csv \
+        -o $RQE_OUT_DIR/results.txt \
+        $RQE_ARGS 
+else
+    bob_say "skipping RQext"
 fi
 
 ## RQ1
@@ -254,40 +260,27 @@ else
     bob_say "skipping RQ1"
 fi
 
-
 ## RQ2
 if $force_all || $force_rq2 || [ ! -d "$RQ2_OUT_DIR" ]; then
     bob_say "RQ2"
-    # rforest (base)
-    bob_cmd "python rq2.py \\
-    $TUN_IN_DIR/train.csv $TUN_IN_DIR/dev.csv \\
+    for cls in rforest gradient svc stacking; do
+        bob_cmd "python rq2.py \\
+    $TUN_IN_DIR/train.csv \\
+    $TUN_IN_DIR/dev.csv \\
     -t $TUN_IN_DIR/test.csv \\
-    -o $RQ2_OUT_DIR/rforest/ \\
-    -p $TUN_OUT_RFOREST_PARAMS \\
-    -c rforest \\
+    -o $RQ2_OUT_DIR/$cls/ \\
+    -p $TUN_OUT_DIR/${cls}_params.json \\
+    -c $cls \\
     $RQ2_ARGS"
-    time python rq2.py \
-        $TUN_IN_DIR/train.csv $TUN_IN_DIR/dev.csv \
-        -t $TUN_IN_DIR/test.csv \
-        -o $RQ2_OUT_DIR/rforest/ \
-        -p $TUN_OUT_RFOREST_PARAMS \
-        -c rforest \
-        $RQ2_ARGS
-    # stacking
-    bob_cmd "python rq2.py \\
-    $TUN_IN_DIR/train.csv $TUN_IN_DIR/dev.csv \\
-    -t $TUN_IN_DIR/test.csv \\
-    -o $RQ2_OUT_DIR/stacking/ \\
-    -p $TUN_OUT_RFOREST_PARAMS \\
-    -c rforest \\
-    $RQ2_ARGS"
-    time python rq2.py \
-        $TUN_IN_DIR/train.csv $TUN_IN_DIR/dev.csv \
-        -t $TUN_IN_DIR/test.csv \
-        -o $RQ2_OUT_DIR/stacking/ \
-        -p $TUN_OUT_RFOREST_PARAMS \
-        -c stacking \
-        $RQ2_ARGS
+        time python rq2.py \
+            $TUN_IN_DIR/train.csv \
+            $TUN_IN_DIR/dev.csv \
+            -t $TUN_IN_DIR/test.csv \
+            -o $RQ2_OUT_DIR/$cls/ \
+            -p $TUN_OUT_DIR/${cls}_params.json \
+            -c $cls \
+            $RQ2_ARGS
+    done
 else
     bob_say "skipping RQ2"
 fi
