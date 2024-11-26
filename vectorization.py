@@ -1,9 +1,12 @@
 import argparse
 
-import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
-import spacy
+from sklearn.feature_selection import SelectKBest, chi2
+import numpy as np
 import pandas as pd
+import spacy
+import nltk
+from nltk.corpus import stopwords
 
 import utils
 
@@ -78,26 +81,38 @@ def vectorize_bow_spacy(path, vocab_file, output_file):
     print("vectorization:vectorize_bow: Vectorization done")
 
 
-def gen_bow_sklearn(path, vocab_file):
+def gen_bow_sklearn(path, vocab_file, top_k_features=None):
     """
     Generate Bag of Words (BoW) vocabulary and save it using sklearn.
     :param path: Path to the CSV file
     :param vocab_file: File to save the vocabulary as a separate mapping
     """
+    nltk.download('stopwords')
+    spanish_stopwords = list(stopwords.words('spanish'))
+
     print("vectorization: Generating Bag of Words (BoW) vocabulary")
     # Load
     sentences = utils.csv_load(path)
     texts = sentences['TXT'].values
 
     # Create BoW vocabulary
-    # vectorizer = CountVectorizer(lowercase=True, stop_words='english')
-    vectorizer = CountVectorizer(lowercase=True, stop_words='spanish')
-    vectorizer.fit(texts)
+    vectorizer = CountVectorizer(lowercase=True, stop_words=spanish_stopwords)
+    X = vectorizer.fit_transform(texts)
 
     vocab = vectorizer.get_feature_names_out()
-    word_to_idx = {word: idx for idx, word in enumerate(vocab)}
+
+    if top_k_features:
+        # Apply feature selection to get the top k features
+        selector = SelectKBest(chi2, k=top_k_features)
+        selector.fit(X, sentences['PU'])  # Assuming 'PU' is the label
+        selected_features = [
+            vocab[i] for i in selector.get_support(indices=True)
+        ]
+        vocab = selected_features  # Update vocab with the selected features
 
     print(f"vectorization:gen_bow: vocabulary size {len(vocab)} words")
+
+    word_to_idx = {word: idx for idx, word in enumerate(vocab)}
 
     # Save vocabulary as DataFrame
     vocab_df = pd.DataFrame({
@@ -120,19 +135,20 @@ def vectorize_bow_sklearn(path, vocab_file, output_file):
 
     # Load vocabulary
     vocab_df = utils.csv_load(vocab_file)
-    vocab = vocab_df['word'].tolist()
+    word_to_idx = {
+        word: idx for idx, word in zip(vocab_df['index'], vocab_df['word'])
+    }
 
     # Load texts
     sentences = utils.csv_load(path)
     texts = sentences['TXT'].values
 
     # Vectorize texts using pre-loaded vocabulary
-    vectorizer = CountVectorizer(vocabulary=vocab)
+    vectorizer = CountVectorizer(vocabulary=word_to_idx)
     bow_vectors = vectorizer.transform(texts).toarray()
 
     # Create DataFrame for BoW vectors
-    bow_df = pd.DataFrame(bow_vectors,
-                          columns=vectorizer.get_feature_names_out())
+    bow_df = pd.DataFrame(bow_vectors)
     bow_df['PU'] = sentences['PU']
 
     # Reorder columns to ensure 'PU' is the first column
@@ -220,7 +236,7 @@ if __name__ == "__main__":
         exit(1)
 
     if args.gen_bow:
-        gen_bow_spacy(args.csv_path, args.output_file)
+        gen_bow_sklearn(args.csv_path, args.output_file, top_k_features=500)
     elif args.mode == 'bow':
         vectorize_bow_sklearn(args.csv_path, args.bow_file, args.output_file)
     elif args.mode == 'spacy':

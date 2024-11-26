@@ -24,7 +24,7 @@ Place the dataset DataI_MD.csv in the directory `./data/raw/`.
 Create and activate a virtual env., then install the required dependencies:
 ```bash
 python -m venv venv
-source venv/bin/activate
+. venv/bin/activate
 pip install -r requirements.txt
 ```
 

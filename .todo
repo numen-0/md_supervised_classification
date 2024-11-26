@@ -13,14 +13,14 @@
 [X] do the thing
 ./train.py:
 [X] do the thing
-./rq2.py:
+./rq2_1.py:
 [X] do the thing
 ./rq2_2.py:
-[_] do the all_basline_cls vs maxarg(all_basline_cls) vs stacking
-[_] add more grapths all the cls toggeter
+[X] do the thing
 ./rqextra.py:
 [X] do the thing
 proyect:
 [X] do the thing
 [_] python tuning.py -t ./data/vectorized/spacy/train.csv -d ./data/vectorized/spacy/dev.csv -o ./data/tuning/stacking_params.json -m big -c stacking
 [_] bot -t -f -s 
+[_] update ./example_params/ with the best small (test) and big ones
