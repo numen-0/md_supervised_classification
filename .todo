@@ -21,6 +21,3 @@
 [X] do the thing
 proyect:
 [X] do the thing
-[_] python tuning.py -t ./data/vectorized/spacy/train.csv -d ./data/vectorized/spacy/dev.csv -o ./data/tuning/stacking_params.json -m big -c stacking
-[_] bot -t -f -s 
-[_] update ./example_params/ with the best small (test) and big ones

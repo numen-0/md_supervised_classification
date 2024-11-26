@@ -25,7 +25,7 @@ def tuning_SVC(X_full, y_full, depth='small', silent=False):
     """
     print("tuning: tuning 'SVC'")
 
-    verbose = 3 if not silent else 1
+    verbose = 2 if not silent else 1
 
     param_grids = {
         'small': {
@@ -97,7 +97,7 @@ def tuning_GradientBoostingClassifier(X_full, y_full, depth='small',
     """
     print("tuning: tuning 'GradientBoostingClassifier'")
 
-    verbose = 3 if not silent else 1
+    verbose = 2 if not silent else 1
 
     param_grids = {
         'small': {
@@ -172,7 +172,7 @@ def tuning_RandomForestClassifier(X_full, y_full, depth='small', silent=False):
     """
     print("tuning: tuning 'RandomForestClassifier'")
 
-    verbose = 3 if not silent else 1
+    verbose = 2 if not silent else 1
 
     param_grids = {
         'small': {
@@ -253,7 +253,7 @@ def tuning_StackingClassifier(X_full, y_full,
 
     print("tuning: tuning 'StackingClassifier'")
 
-    verbose = 3 if not silent else 1
+    verbose = 2 if not silent else 1
 
     param_grids = {
         'small': {
@@ -273,7 +273,7 @@ def tuning_StackingClassifier(X_full, y_full,
             'svm__C': [0.1, 1, 10],
             'svm__kernel': ['linear', 'rbf'],
         },
-        'big': {
+        'big': {  # +10h
             # 'final_estimator__max_iter': [100, 200, 500, 1000],
             'final_estimator__solver': ['lbfgs', 'liblinear'],
             'gb__n_estimators': [100, 200, 500],
@@ -284,9 +284,7 @@ def tuning_StackingClassifier(X_full, y_full,
         }
     }
     param_grid = param_grids.get(depth, param_grids['small'])
-    # pca_components = [50, 150, 250]
-    # pca_components = [50]  # [time 23230.45 seconds]
-    pca_components = [150, 250]  # [time 8953.88 seconds] + [time X? seconds]
+    pca_components = [50, 150, 250]
 
     best_score = -np.inf
     best_params = None
@@ -429,59 +427,3 @@ if __name__ == "__main__":
     utils.mkdir(utils.path_dirname(args.output_file))
     utils.json_save(results, args.output_file)
 
-"""
-1. Diversity in Base Estimators
-
-    Why: Stacking works best when the base estimators have different strengths
-    and weaknesses. If all estimators are too similar, you risk redundancy
-    without much gain in predictive performance.
-    Recommendations:
-        Combine linear models (e.g., LogisticRegression, SGDClassifier) with
-        non-linear models (e.g., RandomForestClassifier,
-        GradientBoostingClassifier).
-        Consider algorithms with different assumptions:
-            Tree-based models (e.g., DecisionTreeClassifier, XGBoost)
-            Distance-based models (e.g., KNeighborsClassifier)
-            Probabilistic models (e.g., Naive Bayes).
-
-2. Choosing the Meta-Estimator
-
-    Why: The meta-estimator combines predictions from base models. It needs to
-    generalize well without overfitting to base predictions.
-    Recommendations:
-        Start with a simple model like LogisticRegression or RidgeClassifier for
-        the meta-estimator, as they are robust and less likely to overfit.
-        For complex problems, consider GradientBoostingClassifier or
-        RandomForestClassifier as meta-estimators, but regularize to avoid
-        overfitting.
-
-3. Limit Overfitting
-
-    Why: Stacking is prone to overfitting, especially when the training set is
-    small.
-    How:
-        Use cross-validation predictions to train the meta-estimator rather than
-        using raw predictions on the training set.
-        Use fewer, well-tuned base models instead of many unoptimized ones.
-
-4. Feature Engineering for Stacking
-
-    Why: The meta-estimator learns from the predictions (or probabilities) of
-    the base models. You can also include original features for additional
-    context.
-    Recommendations:
-        Use predict_proba outputs instead of raw predictions from base models,
-        if supported.
-        Add original features to the meta-estimator input (passthrough=True in
-        StackingClassifier).
-
-5. Balancing Computational Cost
-
-    Why: Stacking can be computationally expensive when combining many
-    estimators.
-    Recommendations:
-        Start with lightweight models (LogisticRegression, RandomForest) for
-        base estimators to assess feasibility.
-        Experiment with heavier models (XGBoost, SVM) later for potentially
-        better performance.
-"""

@@ -2,12 +2,14 @@
     "PCA": 50,
     "CLS": {
         "max_depth": 10,
-        "n_estimators": 100,
+        "min_samples_leaf": 2,
+        "min_samples_split": 2,
+        "n_estimators": 50,
         "random_state": 42,
         "class_weight": "balanced"
     },
     "score": {
-        "accuracy": 0.6056338028169014,
-        "f1": 0.5254237288135594
+        "accuracy": 0.6126760563380281,
+        "f1": 0.5528455284552846
     }
 }

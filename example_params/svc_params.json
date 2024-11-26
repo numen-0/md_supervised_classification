@@ -1,13 +1,14 @@
 {
-    "PCA": 250,
+    "PCA": 150,
     "CLS": {
         "C": 1,
-        "kernel": "linear",
+        "gamma": "scale",
+        "kernel": "rbf",
         "random_state": 42,
         "class_weight": "balanced"
     },
     "score": {
-        "accuracy": 0.5,
-        "f1": 0.5644171779141104
+        "accuracy": 0.47183098591549294,
+        "f1": 0.576271186440678
     }
 }

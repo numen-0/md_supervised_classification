@@ -38,7 +38,7 @@ Run the main dash script, this will take a lot of time due to `tuning.py`:
 
 If you only want a quick test:
 ```bash
-# ~30min to run all
+# ~10min to run all
 ./bob -t
 ```
 
