@@ -9,8 +9,9 @@ their performance on the DataI_MD dataset.
 
 ## Prerequisites
 Ensure you have the following installed:
-- **python** (tested with v3.12.7)
-- **pip** (Python package manager)
+- **python** (tested with v3.12.7).
+- **pip** (Python package manager).
+- you have access to the DataI_MD dataset.
 
 ---
 
@@ -41,8 +42,13 @@ If you only want a quick test:
 ./bob -t
 ```
 
+You can add the flag `-s` to silence some output:
+```bash
+./bob -t -s
+```
+
 If you want to skip tuning:
-``bash
+```bash
 # for full
 cp -r ./example_params ./data/tuning
 ./bob
@@ -59,7 +65,7 @@ The script will:
 4. `train.py`: generate the models from the params adquired in the tuning
 5. `rqextra.py`: run the tests for the RQext
 6. `rq1.py`: run the tests for the RQ1
-7. `rq2.py`: run the tests for the RQ2
+7. `rq2_1.py` + `rq2_2.py`: run the tests for the RQ2
 
 If one step was done, the next time you run the program it will be skiped, but
 you can force to run all or individual steps.
@@ -73,14 +79,20 @@ For more info about the script
 NOTE: if you want to skip the tuning, there are some params in the
 `./example_params`. If you want to run `./rq2.py` they are necesary.
 
-1. preprocess the data
+NOTE: for more info about (almost) any scripts.py:
+```bash
+python script.py -h
+```
+
+##### preprocess the data
 ```bash
 python ./preprocess.py \
     ./data/raw/DataI_MD.csv \
     -o ./data/dataset/ \
     -s 70/20/10
 ```
-2. vectorize the data
+
+##### vectorize the data
 ```bash
 # using BoW
 ## get BoW
@@ -102,7 +114,8 @@ python vectorization.py \
     -m 'spacy'
 ## ...
 ```
-3. train and evaluate models
+
+##### train and evaluate models
 ```bash
 # RandomForestClassifier
 python tuning.py \
@@ -112,7 +125,8 @@ python tuning.py \
     -c rforest -m small
 # ...
 ```
-4. generate the models from the params acquired in the train
+
+##### generate the models from the params acquired in the train
 ```bash
 # RandomForestClassifier
 python inference.py \
@@ -123,7 +137,8 @@ python inference.py \
     -c rforest
 # ...
 ```
-5. run the tests for the RQext, RQ1 and RQ2
+
+##### run the tests for the RQext, RQ1 and RQ2
 ```bash
 # RQext
 python rqextra.py \
@@ -140,7 +155,7 @@ python rq1.py \
     -o ./data/rq1/spacy/
 # RQ2
 ## RandomForestClassifier
-python rq2.py \
+python rq2_1.py \
     ./data/vectorized/spacy/train.csv \
     ./data/vectorized/spacy/dev.csv \
     -t ./data/vectorized/spacy/test.csv \
@@ -148,10 +163,13 @@ python rq2.py \
     -p ./data/tuning/rforest_params.json \
     -c rforest
 ## ...
+python rq2_2.py \
+        ./data/vectorized/spacy/train.csv \
+        ./data/vectorized/spacy/dev.csv \
+        -t ./data/vectorized/spacy/test.csv \
+        -A ./data/vectorized/spacy/rforest_params.json \
+        -B ./data/vectorized/spacy/gradient_params.json \
+        -C ./data/vectorized/spacy/svc_params.json \
+        -D ./data/vectorized/spacy/stacking_params.json \
+        -o ./data/rq2/extra/
 ```
-
-For more info about the scripts:
-```bash
-python script.py -h
-```
-

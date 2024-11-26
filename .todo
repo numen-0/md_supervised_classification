@@ -2,12 +2,7 @@
  ┃ ┃ ┃┃ ┃┃ ┃
  ┻ ┗━┛┻━┛┗━┛
 ./bob:
-[X] add preprocess
-[X] add vectorization
-[X] add tuning
-[X] add train_model
-[X] add testing RQ1
-[X] add testing RQ2
+[X] do the thing
 ./preprocess.py:
 [X] do the thing
 ./vectorization.py:
@@ -20,8 +15,12 @@
 [X] do the thing
 ./rq2.py:
 [X] do the thing
+./rq2_2.py:
+[_] do the all_basline_cls vs maxarg(all_basline_cls) vs stacking
+[_] add more grapths all the cls toggeter
 ./rqextra.py:
-[_] eval random clasifier
+[X] do the thing
 proyect:
-[_] README.md
-    [_] add rqextra
+[X] do the thing
+[_] python tuning.py -t ./data/vectorized/spacy/train.csv -d ./data/vectorized/spacy/dev.csv -o ./data/tuning/stacking_params.json -m big -c stacking
+[_] bot -t -f -s 

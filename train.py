@@ -19,6 +19,7 @@ def train_GradientBoostingClassifier(X_train, y_train, params):
     :param params: dictionary containing the params for GradientBoostingCls
     :return: trained GradientBoostingClassifier model
     :return: used pca | None
+    :return: used scaler | None
     """
     # Extract PCA components if specified
     n_components = params.get("PCA", None)
@@ -36,7 +37,7 @@ def train_GradientBoostingClassifier(X_train, y_train, params):
     print("\ttraining cls with parameters: \n", gb_params)
     cls = GradientBoostingClassifier(**gb_params)
     cls.fit(X_train, y_train)
-    return cls, pca
+    return cls, pca, None
 
 
 def train_SVC(X_train, y_train, params):
@@ -47,6 +48,7 @@ def train_SVC(X_train, y_train, params):
     :param params: dictionary containing the params for SVC
     :return: trained SVC model
     :return: used pca | None
+    :return: used scaler | None
     """
     # Extract PCA components if specified
     n_components = params.get("PCA", None)
@@ -69,7 +71,7 @@ def train_SVC(X_train, y_train, params):
     print("\ttraining cls with parameters: \n", svc_params)
     cls = SVC(**svc_params)
     cls.fit(X_train, y_train)
-    return cls, pca
+    return cls, pca, scaler
 
 
 def train_RandomForestClassifier(X_train, y_train, params):
@@ -79,6 +81,7 @@ def train_RandomForestClassifier(X_train, y_train, params):
     :param params: dictionary containing the params for RandomForestClassifier
     :return: trained RandomForestClassifier model
     :return: used pca | None
+    :return: used scaler | None
     """
     # Extract PCA components if specified
     n_components = params.get("PCA", None)
@@ -97,7 +100,7 @@ def train_RandomForestClassifier(X_train, y_train, params):
     print("\ttraining cls with parameters: \n", rf_params)
     cls = RandomForestClassifier(**rf_params)
     cls.fit(X_train, y_train)
-    return cls, pca
+    return cls, pca, None
 
 
 def train_StackingClassifier(X_train, y_train, params):
@@ -107,6 +110,7 @@ def train_StackingClassifier(X_train, y_train, params):
     :param params: Dictionary containing the parameters for StackingClassifier
     :return: Trained StackingClassifier model
     :return: used pca | None
+    :return: used scaler | None
     """
     # Extract PCA components if specified
     n_components = params.get("PCA", None)
@@ -169,7 +173,7 @@ def train_StackingClassifier(X_train, y_train, params):
                              final_estimator=meta_estimator,
                              passthrough=True)
     cls.fit(X_train, y_train)
-    return cls, pca
+    return cls, pca, scaler
 
 
 def merge_data(paths):
@@ -216,16 +220,16 @@ if __name__ == "__main__":
 
     if args.classifier == "rforest":
         print("train: training 'RandomForestClassifier'")
-        cls, _ = train_RandomForestClassifier(X_train, y_train, params)
+        cls, _, _ = train_RandomForestClassifier(X_train, y_train, params)
     elif args.classifier == "svc":
         print("train: training 'SVC'")
-        cls, _ = train_SVC(X_train, y_train, params)
+        cls, _, _ = train_SVC(X_train, y_train, params)
     elif args.classifier == "gradient":
         print("train: training 'GradientBoostingClassifier'")
-        cls, _ = train_GradientBoostingClassifier(X_train, y_train, params)
+        cls, _, _ = train_GradientBoostingClassifier(X_train, y_train, params)
     elif args.classifier == "stacking":
         print("train: training 'StackingClassifier'")
-        cls, _ = train_StackingClassifier(X_train, y_train, params)
+        cls, _, _ = train_StackingClassifier(X_train, y_train, params)
     else:
         print("train: Unknown classifier")
         exit(1)

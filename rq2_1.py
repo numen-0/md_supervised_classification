@@ -113,17 +113,18 @@ if __name__ == "__main__":
 
     if args.classifier == "rforest":
         print("rq2: training 'RandomForestClassifier'")
-        cls, pca = train.train_RandomForestClassifier(X_train, y_train, params)
+        cls, pca, sc = train.train_RandomForestClassifier(X_train,
+                                                          y_train, params)
     elif args.classifier == "svc":
         print("rq2: training 'SVC'")
-        cls, pca = train.train_SVC(X_train, y_train, params)
+        cls, pca, sc = train.train_SVC(X_train, y_train, params)
     elif args.classifier == "gradient":
         print("rq2: training 'GradientBoostingClassifier'")
-        cls, pca = train.train_GradientBoostingClassifier(X_train, y_train,
-                                                          params)
+        cls, pca, sc = train.train_GradientBoostingClassifier(X_train, y_train,
+                                                              params)
     elif args.classifier == "stacking":
         print("rq2: training 'StackingClassifier'")
-        cls, pca = train.train_StackingClassifier(X_train, y_train, params)
+        cls, pca, sc = train.train_StackingClassifier(X_train, y_train, params)
     else:
         print("rq2: Unknown classifier")
         exit(1)
@@ -131,5 +132,8 @@ if __name__ == "__main__":
     if pca is not None:
         print("rq2: PCA fit")
         X_test = pca.transform(X_test)
+    if sc is not None:
+        print("rq2: Scaler fit")
+        X_test = sc.transform(X_test)
 
     test(cls, X_test, y_test, args.output_dir, silent=args.silent)

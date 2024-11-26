@@ -263,24 +263,45 @@ fi
 ## RQ2
 if $force_all || $force_rq2 || [ ! -d "$RQ2_OUT_DIR" ]; then
     bob_say "RQ2"
-    for cls in rforest gradient svc stacking; do
-        bob_cmd "python rq2.py \\
-    $TUN_IN_DIR/train.csv \\
-    $TUN_IN_DIR/dev.csv \\
-    -t $TUN_IN_DIR/test.csv \\
-    -o $RQ2_OUT_DIR/$cls/ \\
-    -p $TUN_OUT_DIR/${cls}_params.json \\
-    -c $cls \\
-    $RQ2_ARGS"
-        time python rq2.py \
-            $TUN_IN_DIR/train.csv \
-            $TUN_IN_DIR/dev.csv \
-            -t $TUN_IN_DIR/test.csv \
-            -o $RQ2_OUT_DIR/$cls/ \
-            -p $TUN_OUT_DIR/${cls}_params.json \
-            -c $cls \
-            $RQ2_ARGS
-    done
+    # for cls in rforest gradient svc stacking; do
+    #     bob_cmd "python rq2_1.py \\
+    # $TUN_IN_DIR/train.csv \\
+    # $TUN_IN_DIR/dev.csv \\
+    # -t $TUN_IN_DIR/test.csv \\
+    # -o $RQ2_OUT_DIR/$cls/ \\
+    # -p $TUN_OUT_DIR/${cls}_params.json \\
+    # -c $cls \\
+    # $RQ2_ARGS"
+    #     time python rq2_1.py \
+    #         $TUN_IN_DIR/train.csv \
+    #         $TUN_IN_DIR/dev.csv \
+    #         -t $TUN_IN_DIR/test.csv \
+    #         -o $RQ2_OUT_DIR/$cls/ \
+    #         -p $TUN_OUT_DIR/${cls}_params.json \
+    #         -c $cls \
+    #         $RQ2_ARGS
+    # done
+    bob_cmd "python rq2_2.py \\
+        $TUN_IN_DIR/train.csv \\
+        $TUN_IN_DIR/dev.csv \\
+        -t $TUN_IN_DIR/test.csv \\
+        -A $TUN_IN_DIR/rforest_params.json \\
+        -B $TUN_IN_DIR/gradient_params.json \\
+        -C $TUN_IN_DIR/svc_params.json \\
+        -D $TUN_IN_DIR/stacking_params.json \\
+        -o $RQ2_OUT_DIR/extra/ \\
+        $RQ2_ARGS"
+    time python rq2_2.py \
+        $TUN_IN_DIR/train.csv \
+        $TUN_IN_DIR/dev.csv \
+        -t $TUN_IN_DIR/test.csv \
+        -A $TUN_OUT_DIR/rforest_params.json \
+        -B $TUN_OUT_DIR/gradient_params.json \
+        -C $TUN_OUT_DIR/svc_params.json \
+        -D $TUN_OUT_DIR/stacking_params.json \
+        -o $RQ2_OUT_DIR/extra/ \
+        $RQ2_ARGS
+
 else
     bob_say "skipping RQ2"
 fi

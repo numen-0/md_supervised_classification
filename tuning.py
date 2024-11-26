@@ -37,7 +37,7 @@ def tuning_SVC(X_full, y_full, depth='small', silent=False):
             'kernel': ['linear', 'rbf', 'poly'],
             'gamma': ['scale', 'auto'],
         },
-        'big': {
+        'big': {  # 2 mins
             'C': [0.1, 1, 10, 100],
             'kernel': ['linear', 'rbf', 'poly', 'sigmoid'],
             'gamma': ['scale', 'auto'],
@@ -67,6 +67,7 @@ def tuning_SVC(X_full, y_full, depth='small', silent=False):
             param_grid=param_grid,
             scoring='f1',
             cv=3,
+            n_jobs=-1,
             verbose=verbose
         )
         grid_search.fit(X_full_pca, y_full)
@@ -110,7 +111,7 @@ def tuning_GradientBoostingClassifier(X_full, y_full, depth='small',
             'max_depth': [3, 5, 10],
             'subsample': [0.8, 1.0],
         },
-        'big': {
+        'big': {  # +3h
             'n_estimators': [50, 100, 200, 500],
             'learning_rate': [0.1, 0.05, 0.01, 0.005],
             'max_depth': [3, 5, 10, 20],
@@ -142,6 +143,7 @@ def tuning_GradientBoostingClassifier(X_full, y_full, depth='small',
             param_grid=param_grid,
             scoring='f1',
             cv=3,
+            n_jobs=-1,
             verbose=verbose
         )
         grid_search.fit(X_full_pca, y_full)
@@ -182,7 +184,7 @@ def tuning_RandomForestClassifier(X_full, y_full, depth='small', silent=False):
             'max_depth': [None, 10, 20, 30],
             'min_samples_split': [2, 5],
         },
-        'big': {
+        'big': {  # 10mins
             'n_estimators': [50, 100, 200, 500],
             'max_depth': [None, 10, 20, 30, 50],
             'min_samples_split': [2, 5, 10],
@@ -213,6 +215,7 @@ def tuning_RandomForestClassifier(X_full, y_full, depth='small', silent=False):
             param_grid=param_grid,
             scoring='f1',  # Optimize for F1 score
             cv=3,          # n-fold cross-validation
+            n_jobs=-1,
             verbose=verbose
         )
         grid_search.fit(X_full_pca, y_full)
@@ -282,7 +285,8 @@ def tuning_StackingClassifier(X_full, y_full,
     }
     param_grid = param_grids.get(depth, param_grids['small'])
     # pca_components = [50, 150, 250]
-    pca_components = [50]  # al menos nos toca esperar unas 2h
+    # pca_components = [50]  # [time 23230.45 seconds]
+    pca_components = [150, 250]  # [time 8953.88 seconds] + [time X? seconds]
 
     best_score = -np.inf
     best_params = None
@@ -322,6 +326,7 @@ def tuning_StackingClassifier(X_full, y_full,
             param_grid=param_grid,
             scoring='f1',  # Optimize for F1 score
             cv=3,          # n-fold cross-validation
+            n_jobs=-1,
             verbose=verbose
         )
         grid_search.fit(X_full_pca, y_full)
