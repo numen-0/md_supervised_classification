@@ -2,9 +2,10 @@ from sys import exit
 import argparse
 import re
 
-import pandas as pd
 from functools import reduce
 from sklearn.model_selection import train_test_split
+import numpy as np
+import pandas as pd
 
 import utils
 import analyzer
@@ -232,9 +233,16 @@ def data_parse(data, analyze=False):
         print(f"\tdev   size: {len(dev_df)}\t({config['split'][1] * 100}%)")
         print(f"\ttest  size: {len(test_df)}\t({config['split'][2] * 100}%)")
 
-        analyzer.analyze_raw(data_raw, config["analyzer_dir"], prefix="post_filter",
+        analyzer.analyze_raw(data_raw, config["analyzer_dir"],
+                             prefix="post_filter",
                              silent=config["silent_analysis"])
-        analyzer.analyze_ext(data_fxx, config["analyzer_dir"], prefix="post_filter",
+        analyzer.analyze_ext(data_fxx, config["analyzer_dir"],
+                             prefix="post_filter",
+                             silent=config["silent_analysis"])
+
+        data_full = pd.concat([train_df, test_df, dev_df], ignore_index=True)
+        analyzer.analyze_raw(data_full, config["analyzer_dir"],
+                             prefix="post_preprocess",
                              silent=config["silent_analysis"])
 
     return train_df, dev_df, test_df

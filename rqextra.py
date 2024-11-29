@@ -1,6 +1,7 @@
 
 import argparse
 
+from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import f1_score
 import numpy as np
 
@@ -41,13 +42,22 @@ def test(X_test, y_test, out_file, silent=False):
     utils.log(f"Zero-Rule Baseline - F1 Score: {zero_rule_f1:.4f}", log_file,
               silent)
 
+    # Hierarchical Clustering Baseline
+    print("rqextra: hierarchical clustering baseline with 2 clusters")
+    clustering = AgglomerativeClustering(n_clusters=2)
+    y_cluster = clustering.fit_predict(X_test)
+    cluster_f1 = f1_score(y_test, y_cluster, average='weighted')
+
+    utils.log(f"Hierarchical Clustering - F1 Score: {cluster_f1:.4f}",
+              log_file, silent)
+
     print("rqextra: evaluation completed")
 
 
 ###############################################################################
 # main ########################################################################
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="RQ2")
+    parser = argparse.ArgumentParser(description="RQextra")
     parser.add_argument('-t', '--test-csv', type=str, required=True,
                         help="Path to the train CSV file")
     parser.add_argument('-o', '--output-file', type=str, required=True,

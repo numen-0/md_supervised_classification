@@ -38,11 +38,19 @@ def analyze_raw(data, output_dir, prefix="raw_data", silent=False):
     pu_distribution = data.groupby('PU')['UI'].nunique() / total_unique_uis * 100
     utils.log(f"\tPU class distribution:\n{pu_distribution}", log_file, silent)
     # plot
-    fig, ax = plt.subplots()
-    sns.barplot(x=pu_distribution.index, y=pu_distribution.values, ax=ax)
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.barplot(x=pu_distribution.index, y=pu_distribution.values, ax=ax,
+                palette="viridis")
+    for i, value in enumerate(pu_distribution.values):
+        ax.text(i, value + 0.5, f"{value:.2f}%", ha="center", va="bottom",
+                fontsize=10)
     ax.set_title('PU Class Distribution')
     ax.set_xlabel('PU')
     ax.set_ylabel('Percentage (%)')
+    ax.tick_params(axis='both', which='major', labelsize=10)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    ax.set_ylim(0, max(pu_distribution.values) + 5)
+    plt.tight_layout()
     utils.fig_save(fig, prefix + '_pu_class_distribution.png')
 
     # UI
@@ -60,12 +68,29 @@ def analyze_raw(data, output_dir, prefix="raw_data", silent=False):
     text_length_stats = data['text_length'].describe()
     utils.log(f"\ttext length statistics:\n{text_length_stats}", log_file, silent)
     # plot
-    fig, ax = plt.subplots()
-    sns.histplot(data['text_length'], bins=20, kde=True, ax=ax)
-    ax.set_title('Text Length Distribution')
-    ax.set_xlabel('Text Length (characters)')
-    ax.set_ylabel('Frequency')
-    utils.fig_save(fig, prefix + '_text_length_distribution.png')
+    utils.log(f"[TXT]:length", log_file, silent)
+    data['text_length'] = data['TXT'].apply(len)
+    text_length_stats = data['text_length'].describe()
+    utils.log(f"\ttext length statistics:\n{text_length_stats}", log_file, silent)
+
+    # Plot histogram and KDE
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6))  # Two plots side by side
+
+    # Histogram with cooler colors
+    sns.histplot(data['text_length'], bins=20, kde=True, ax=axes[0], color="#4C9FD1")
+    axes[0].set_title('Text Length Distribution', fontsize=14, fontweight='bold')
+    axes[0].set_xlabel('Text Length (characters)', fontsize=12)
+    axes[0].set_ylabel('Frequency', fontsize=12)
+    axes[0].grid(axis='y', linestyle='--', alpha=0.7)
+
+    # Boxplot with cooler color
+    sns.boxplot(data=data, x='text_length', ax=axes[1], color="#6DBF8B")
+    axes[1].set_title('Text Length Boxplot', fontsize=14, fontweight='bold')
+    axes[1].set_xlabel('Text Length (characters)', fontsize=12)
+    axes[1].set_ylabel('Distribution', fontsize=12)
+
+    plt.tight_layout()
+    utils.fig_save(fig, prefix + '_text_length_analysis.png')
 
     # # TXT - words
     utils.log(f"[TXT]:words", log_file, silent)

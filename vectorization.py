@@ -168,13 +168,13 @@ def vectorize_spacy(path, output_file, batch_size=128):
     :param output_file: File to save the output CSV
     :param batch_size: The size of the batches
     """
-    print("vectorization: vectorizing using SpaCy", flush=True)
+    print("vectorization: vectorizing using SpaCy")
 
     sentences = utils.csv_load(path)
     texts = sentences['TXT'].values
     nlp = spacy.load("es_core_news_md")
 
-    print("vectorization:vectorize_spacy: batching", flush=True)
+    print("vectorization:vectorize_spacy: batching")
     docs = []
     for i in range(0, len(texts), batch_size):
         print(f"\tProcessed {i:3d}/{len(texts)} ({i * 100 / len(texts):.2f}%)")
@@ -198,6 +198,7 @@ def vectorize_spacy(path, output_file, batch_size=128):
     print("vectorization:vectorize_spacy: Vectorization done")
 
 
+# others ######################################################################
 def validate_args(args):
     """
     Validate command-line arguments.

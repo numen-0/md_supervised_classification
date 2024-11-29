@@ -4,7 +4,6 @@ import time
 from sklearn.metrics import f1_score, accuracy_score
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import mode
 
 import utils
 import train
@@ -13,7 +12,43 @@ import train
 def test(X_train, y_train, X_test, y_test,
          params_rf, params_sv, params_gr, params_st, out_dir, silent=False):
     '''
-    TODO: doc this
+    Evaluates multiple classifiers on a given dataset, including training,
+    prediction, and evaluation phases. Results are saved.
+    1. Training:
+        - Trains the following classifiers:
+          - RandomForestClassifier
+          - SVC
+          - GradientBoostingClassifier
+          - StackingClassifier
+    2. Data Transformation:
+        - Applies PCA and scaling (if available) to test data for consistency
+          with the training pipeline.
+    3. Prediction:
+        - Makes predictions using each trained classifier.
+        - Implements a custom stacking method (`StackMax`) that aggregates
+          predictions using majority voting.
+        - Logs prediction time for each classifier.
+    4. Evaluation:
+        - Computes and logs metrics for each classifier:
+          - Accuracy
+          - F1 Score for PU = 0
+          - F1 Score for PU = 1
+          - Macro F1 Score
+          - Weighted F1 Score
+    5. **Visualization**:
+        - Creates a combined bar chart comparing classifier metrics.
+        - Saves the chart as a PNG file in the output directory.
+
+    :param X_train : array-like of shape (n_samples, n_features)
+    :param y_train : array-like of shape (n_samples,)
+    :param X_test : array-like of shape (n_samples, n_features)
+    :param y_test : array-like of shape (n_samples,)
+    :param params_rf : dict Hyperparameters for the RandomForestClassifier.
+    :param params_sv : dict Hyperparameters for the SVC.
+    :param params_gr : dict Hyperparameters for the GradientBoostingClassifier.
+    :param params_st : dict Hyperparameters for the StackingClassifier.
+    :param out_dir : str Directory where results and plots will be saved.
+    :param silent : bool, suppress some output (def.=False).
     '''
     utils.mkdir(out_dir)
     log_file = utils.path_join(out_dir, "results.txt")
@@ -174,7 +209,7 @@ def test(X_train, y_train, X_test, y_test,
         utils.log(f"    F1 Score (PU=0): {f1_PU_0:.6f}", log_file, silent)
         utils.log(f"    F1 Score (PU=1): {f1_PU_1:.6f}", log_file, silent)
         utils.log(f"    F1 Score (Macro): {f1_macro:.6f}", log_file, silent)
-        utils.log(f"    F1 Score (Weighted): {f1_weighted:.6f}",
+        utils.log(f"    F1 Score (Weighted): {f1_weighted:.5f}",
                   log_file, silent)
 
     # Plot combined bar chart
